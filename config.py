@@ -30,32 +30,25 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production environment configuration."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL',
-        'postgresql://postgres:password@localhost:5432/mall_billing_prod'
-    )
+    
+    # Correct PostgreSQL scheme and accessing env var
+    _db_url = os.environ.get('DATABASE_URL')
+    if _db_url and _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    
+    SQLALCHEMY_DATABASE_URI = _db_url or 'postgresql://postgres:password@localhost:5432/mall_billing_prod'
 
-    # In production, ensure SECRET_KEY is set via environment variable
-    # If not set, this will raise an error during app startup (handled in create_app)
-    @property
-    def SECRET_KEY(self):
-        key = os.environ.get('SECRET_KEY')
-        if not key:
-            raise ValueError("SECRET_KEY environment variable is required in production!")
-        return key
-
-    SESSION_COOKIE_SECURE = False  # Set to True if serving over HTTPS (recommended)
+    # Ensure SECRET_KEY is set
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    
+    # Session Cookie Security
+    SESSION_COOKIE_SECURE = True # Always True in Prod (Render enforces HTTPS)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
 
-    # Cloud Demo Mode: Disables backups and sensitive file operations
-    @property
-    def CLOUD_DEMO(self):
-        return os.environ.get('CLOUD_DEMO', 'False').lower() == 'true'
-
-    @property
-    def LOCAL_PRODUCTION(self):
-        return not self.CLOUD_DEMO
+    # Feature Flags
+    CLOUD_DEMO = os.environ.get('CLOUD_DEMO', 'False').lower() == 'true'
+    LOCAL_PRODUCTION = not CLOUD_DEMO
 
 
 config = {
