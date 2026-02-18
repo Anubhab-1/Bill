@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update product details{% else %}Add a new product to inventory{% endif %}{%
+endblock %}
+
+{% block content %}
+
+<div class="max-w-2xl">
+
+    <!-- Back link -->
+    <a href="{{ url_for('inventory.index') }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Inventory
+    </a>
+
+    <!-- Form card -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8">
+
+        <h2 class="text-base font-semibold text-white mb-6">
+            {% if is_edit %}Edit Product{% else %}New Product{% endif %}
+        </h2>
+
+        <form method="POST" action="{{ form_action }}" novalidate>
+
+            <!-- ── Name ──────────────────────────────────────────────── -->
+            <div class="mb-5">
+                <label for="name" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Product Name <span class="text-red-400">*</span>
+                </label>
+                <input id="name" name="name" type="text" value="{{ form_data.get('name', '') }}"
+                    placeholder="e.g. Basmati Rice 1kg" class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white
+                 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                 focus:border-transparent transition-colors
+                 {{ 'border-red-500' if errors.get('name') else 'border-gray-700' }}" />
+                {% if errors.get('name') %}
+                <p class="mt-1.5 text-xs text-red-400">{{ errors.name }}</p>
+                {% endif %}
+            </div>
+
+            <!-- ── Barcode ────────────────────────────────────────────── -->
+            <div class="mb-5">
+                <label for="barcode" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Barcode <span class="text-red-400">*</span>
+                </label>
+                <input id="barcode" name="barcode" type="text" value="{{ form_data.get('barcode', '') }}"
+                    placeholder="e.g. 8901234567890" class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white font-mono
+                 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                 focus:border-transparent transition-colors
+                 {{ 'border-red-500' if errors.get('barcode') else 'border-gray-700' }}" />
+                {% if errors.get('barcode') %}
+                <p class="mt-1.5 text-xs text-red-400">{{ errors.barcode }}</p>
+                {% endif %}
+            </div>
+
+            <!-- ── Price + GST (side by side) ────────────────────────── -->
+            <div class="grid grid-cols-2 gap-4 mb-5">
+
+                <!-- Price -->
+                <div>
+                    <label for="price" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                        Base Price (₹) <span class="text-red-400">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                        <input id="price" name="price" type="number" step="0.01" min="0.01"
+                            value="{{ form_data.get('price', '') }}" placeholder="0.00" class="w-full bg-gray-800 border rounded-lg pl-7 pr-4 py-2.5 text-sm text-white
+                     placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                     focus:border-transparent transition-colors
+                     {{ 'border-red-500' if errors.get('price') else 'border-gray-700' }}" />
+                    </div>
+                    {% if errors.get('price') %}
+                    <p class="mt-1.5 text-xs text-red-400">{{ errors.price }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- GST -->
+                <div>
+                    <label for="gst_percent"
+                        class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                        GST (%)
+                    </label>
+                    <select id="gst_percent" name="gst_percent" class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white
+                   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+                   transition-colors
+                   {{ 'border-red-500' if errors.get('gst_percent') else 'border-gray-700' }}">
+                        {% for rate in [0, 5, 12, 18, 28] %}
+                        <option value="{{ rate }}" {% if form_data.get('gst_percent', '0' )|string==rate|string
+                            %}selected{% endif %}>
+                            {{ rate }}%
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.get('gst_percent') %}
+                    <p class="mt-1.5 text-xs text-red-400">{{ errors.gst_percent }}</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- ── Stock ──────────────────────────────────────────────── -->
+            <div class="mb-8">
+                <label for="stock" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Stock Quantity
+                </label>
+                <input id="stock" name="stock" type="number" min="0" step="1" value="{{ form_data.get('stock', '0') }}"
+                    placeholder="0" class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white
+                 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                 focus:border-transparent transition-colors
+                 {{ 'border-red-500' if errors.get('stock') else 'border-gray-700' }}" />
+                {% if errors.get('stock') %}
+                <p class="mt-1.5 text-xs text-red-400">{{ errors.stock }}</p>
+                {% endif %}
+            </div>
+
+            <!-- ── Actions ────────────────────────────────────────────── -->
+            <div class="flex items-center gap-3 pt-2 border-t border-gray-800">
+                <button type="submit" id="submit-product-btn" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold
+                 rounded-lg transition-colors focus:outline-none focus:ring-2
+                 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                    {% if is_edit %}Save Changes{% else %}Add Product{% endif %}
+                </button>
+                <a href="{{ url_for('inventory.index') }}" class="px-5 py-2.5 text-sm font-medium text-gray-400 hover:text-white
+                  hover:bg-gray-800 rounded-lg transition-colors">
+                    Cancel
+                </a>
+
+                {% if is_edit %}
+                <!-- Danger zone: delete from edit page -->
+                <div class="ml-auto">
+                    <button type="button" hx-post="{{ url_for('inventory.delete', product_id=product.id) }}"
+                        hx-confirm="Delete '{{ product.name }}'? This cannot be undone."
+                        hx-on::after-request="window.location.href='{{ url_for('inventory.index') }}'" class="px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10
+                   rounded-lg transition-colors">
+                        Delete Product
+                    </button>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Hint box -->
+    <div class="mt-4 flex items-start gap-2.5 px-4 py-3 bg-gray-900/50 border border-gray-800 rounded-lg">
+        <svg class="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-xs text-gray-500">
+            GST rates follow Indian tax slabs: 0%, 5%, 12%, 18%, 28%.
+            MRP displayed in the inventory list is base price inclusive of selected GST.
+        </p>
+    </div>
+
+</div>
+
+{% endblock %}

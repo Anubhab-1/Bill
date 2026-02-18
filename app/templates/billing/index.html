@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block page_title %}Billing{% endblock %}
+{% block page_subtitle %}Scan barcodes to build a sale{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6 h-full">
+
+    <!-- ══ LEFT: Barcode Input ══════════════════════════════════════ -->
+    <div class="xl:col-span-2 flex flex-col gap-5">
+
+        <!-- Barcode scanner card -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Scan / Enter Barcode
+            </p>
+
+            <!-- HTMX form — posts to /billing/add-item, swaps #cart-section -->
+            <form hx-post="{{ url_for('billing.add_item') }}" hx-target="#cart-section" hx-swap="innerHTML"
+                hx-on::after-request="this.reset(); document.getElementById('barcode-input').focus();">
+                <div class="flex gap-3">
+                    <input id="barcode-input" name="barcode" type="text" placeholder="Barcode…" autocomplete="off"
+                        autofocus class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3
+                   text-base text-white placeholder-gray-500 font-mono
+                   focus:outline-none focus:ring-2 focus:ring-brand-500
+                   focus:border-transparent transition-colors" />
+                    <button type="submit" class="px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm
+                   font-semibold rounded-lg transition-colors flex-shrink-0
+                   focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        Add
+                    </button>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">
+                    Press <kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-400">Enter</kbd>
+                    or click Add after scanning
+                </p>
+            </form>
+        </div>
+
+        <!-- Keyboard shortcut hint -->
+        <div class="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Shortcuts</p>
+            <div class="space-y-2 text-xs text-gray-500">
+                <div class="flex justify-between">
+                    <span>Focus barcode field</span>
+                    <kbd class="bg-gray-800 px-2 py-0.5 rounded text-gray-400">F2</kbd>
+                </div>
+                <div class="flex justify-between">
+                    <span>Complete sale</span>
+                    <kbd class="bg-gray-800 px-2 py-0.5 rounded text-gray-400">F9</kbd>
+                </div>
+                <div class="flex justify-between">
+                    <span>Clear cart</span>
+                    <kbd class="bg-gray-800 px-2 py-0.5 rounded text-gray-400">Esc</kbd>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-2">
+            <a href="{{ url_for('billing.close_session') }}"
+                class="block w-full text-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg transition-colors text-sm font-medium">
+                Close Shift / Reconcile
+            </a>
+        </div>
+
+    </div>
+
+    <!-- ══ RIGHT: Cart ══════════════════════════════════════════════ -->
+    <div class="xl:col-span-3 flex flex-col">
+
+        <div id="cart-section">
+            {% include 'billing/_cart.html' %}
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // ── Keyboard shortcuts ────────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+        // F2 → focus barcode input
+        if (e.key === 'F2') {
+            e.preventDefault();
+            document.getElementById('barcode-input').focus();
+        }
+        // F9 → submit complete-sale form
+        if (e.key === 'F9') {
+            e.preventDefault();
+            const btn = document.getElementById('complete-sale-btn');
+            if (btn && !btn.disabled) btn.click();
+        }
+    });
+
+    // Re-focus barcode input after every HTMX swap
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.detail.target.id === 'cart-section') {
+            const input = document.getElementById('barcode-input');
+            if (input) input.focus();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+2026-02-19 00:43:17,569 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 00:43:18,243 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 00:44:50,089 | WARNING | app | 127.0.0.1 | http://127.0.0.1:5000/auth/login | Failed login attempt for username: Anubhab
+2026-02-19 00:46:18,165 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 00:46:47,858 | WARNING | app | 127.0.0.1 | http://127.0.0.1:5000/auth/login | Failed login attempt for username: Anubhab
+2026-02-19 00:46:59,799 | WARNING | app | 127.0.0.1 | http://127.0.0.1:5000/auth/login | Failed login attempt for username: admin
+2026-02-19 00:47:29,794 | WARNING | app | 127.0.0.1 | http://127.0.0.1:5000/auth/login | Failed login attempt for username: admin
+2026-02-19 00:47:39,901 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/auth/login | User Anubhab logged in successfully.
+2026-02-19 00:49:33,139 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/inventory/new | Admin created product: Cadbury Brownie (7622202329173)
+2026-02-19 00:51:02,332 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/inventory/new | Admin created product: Lays (8901491003124)
+2026-02-19 00:51:55,179 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/inventory/new | Admin created product: UNO FLIP (6978248452780)
+2026-02-19 00:53:08,089 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/billing/complete | Sale completed by User ID 3: 2026-0001 | Total: 378.00
+2026-02-19 01:26:51,499 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:28:05,062 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:28:21,985 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:28:48,977 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:28:58,794 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:29:25,720 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:29:55,719 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:30:05,575 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:31:43,546 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:33:01,189 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:34:58,255 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:35:32,377 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:35:52,363 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:38:39,574 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 01:42:45,066 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/billing/complete | Sale completed by User ID 3: 2026-0002 | Total: 100.80
+2026-02-19 01:43:35,482 | WARNING | app | 127.0.0.1 | http://127.0.0.1:5000/billing/session/close | Session Closed (ID 1): Discrepancy -0.80 (Exp: 10100.80, Act: 10100)
+2026-02-19 01:55:14,600 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:12:50,397 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:12:51,185 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:13:05,673 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:13:35,143 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:14:30,010 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:17:29,526 | ERROR | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | SQLite backup failed: [Errno 2] No such file or directory: 'C:\\Users\\anubhab samanta\\OneDrive\\Desktop\\Mall\\app\\..\\mall.db'
+2026-02-19 02:18:07,525 | ERROR | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | SQLite backup failed: [Errno 2] No such file or directory: 'C:\\Users\\anubhab samanta\\OneDrive\\Desktop\\Mall\\app\\..\\mall.db'
+2026-02-19 02:18:24,457 | ERROR | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | SQLite backup failed: [Errno 2] No such file or directory: 'C:\\Users\\anubhab samanta\\OneDrive\\Desktop\\Mall\\app\\..\\mall.db'
+2026-02-19 02:22:12,990 | INFO | app | None | None | Mall Billing System startup
+2026-02-19 02:22:56,415 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | Backup successful (SQLite copy): backup_20260219_0222.db
+2026-02-19 02:23:01,133 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | Backup successful (SQLite copy): backup_20260219_0223.db
+2026-02-19 02:23:13,213 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | Backup successful (SQLite copy): backup_20260219_0223.db
+2026-02-19 02:26:52,772 | INFO | app | 127.0.0.1 | http://127.0.0.1:5000/admin/backup | Backup successful (SQLite copy): backup_20260219_0226.db

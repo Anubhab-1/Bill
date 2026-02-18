@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back{% if current_user %}, {{ current_user.name }}{% endif %} — here's your system
+overview{% endblock %}
+
+{% block content %}
+
+<!-- ── Status Banner ──────────────────────────────────────────── -->
+<div class="mb-6 flex items-center gap-3 bg-brand-900/40 border border-brand-700/50 rounded-xl px-5 py-3.5">
+    <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse"></span>
+    <p class="text-sm text-brand-100">
+        <span class="font-semibold">Phase 5 active.</span>
+        Billing engine live · Reporting &amp; owner visibility operational.
+    </p>
+</div>
+
+<!-- ── KPI Cards ─────────────────────────────────────────────── -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+
+    <!-- Today's Revenue -->
+    <a href="{{ url_for('reports.index') }}"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors block">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Revenue</p>
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-white">₹{{ "{:.2f}".format(todays_revenue | float) }}</p>
+        <p class="text-xs text-gray-500 mt-1">
+            {{ todays_count }} transaction{{ 's' if todays_count != 1 else '' }} today
+        </p>
+    </a>
+
+    <!-- Avg Bill Value -->
+    <a href="{{ url_for('reports.index') }}"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors block">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Avg. Bill Value</p>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-white">₹{{ "{:.2f}".format(todays_avg | float) }}</p>
+        <p class="text-xs text-gray-500 mt-1">Average per transaction</p>
+    </a>
+
+    <!-- Low Stock Alert -->
+    <a href="{{ url_for('inventory.index') }}"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors block">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Low Stock</p>
+            <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-white">{{ low_stock_count }}</p>
+        <p class="text-xs mt-1 {{ 'text-red-400' if low_stock_count > 0 else 'text-gray-500' }}">
+            {{ 'Items need restocking' if low_stock_count > 0 else 'All stock levels OK' }}
+        </p>
+    </a>
+
+    <!-- Inventory Items -->
+    <a href="{{ url_for('inventory.index') }}"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors block">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Inventory Items</p>
+            <div class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-white">{{ product_count }}</p>
+        <p class="text-xs text-gray-500 mt-1">
+            {{ 'Products in system' if product_count > 0 else 'No products yet' }}
+        </p>
+    </a>
+
+</div>
+
+<!-- ── Bottom Row: Top Products + System Status + Quick Actions ── -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Top 5 Products Today -->
+    <div class="lg:col-span-1 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-sm font-semibold text-white">Top Products Today</h2>
+            <a href="{{ url_for('reports.index') }}"
+                class="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+                Full report →
+            </a>
+        </div>
+
+        {% if top_products %}
+        <div class="space-y-3">
+            {% for p in top_products %}
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="text-xs text-gray-600 w-4 flex-shrink-0">{{ loop.index }}</span>
+                    <span class="text-sm text-gray-300 truncate">{{ p.name }}</span>
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0 ml-2">
+                    <span class="text-xs text-gray-500">×{{ p.qty }}</span>
+                    <span class="text-xs font-medium text-brand-400">₹{{ "{:.0f}".format(p.revenue | float) }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+            <p class="text-gray-600 text-sm">No sales today yet.</p>
+            <a href="{{ url_for('billing.index') }}"
+                class="mt-2 text-xs text-brand-400 hover:text-brand-300 transition-colors">
+                Open Billing →
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- System Modules -->
+    <div class="lg:col-span-1 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h2 class="text-sm font-semibold text-white mb-4">System Modules</h2>
+        <div class="space-y-3">
+            {% set modules = [
+            ('Dashboard', 'Operational', 'green'),
+            ('Auth', 'Operational', 'green'),
+            ('Inventory', 'Operational', 'green'),
+            ('Billing', 'Operational', 'green'),
+            ('Reports', 'Operational', 'green'),
+            ] %}
+            {% for name, status, color in modules %}
+            <div class="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
+                <div class="flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full
+            {% if color == 'green' %}bg-green-400
+            {% elif color == 'yellow' %}bg-yellow-400
+            {% else %}bg-gray-500{% endif %}">
+                    </span>
+                    <span class="text-sm text-gray-300">{{ name }}</span>
+                </div>
+                <span class="text-xs px-2.5 py-1 rounded-full font-medium
+          {% if color == 'green' %}bg-green-500/10 text-green-400
+          {% elif color == 'yellow' %}bg-yellow-500/10 text-yellow-400
+          {% else %}bg-gray-700 text-gray-400{% endif %}">
+                    {{ status }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="lg:col-span-1 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h2 class="text-sm font-semibold text-white mb-4">Quick Actions</h2>
+        <div class="space-y-2">
+
+            <a href="{{ url_for('billing.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300
+                hover:bg-gray-800 hover:text-white transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                </svg>
+                Open Billing
+            </a>
+
+            <a href="{{ url_for('inventory.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300
+                hover:bg-gray-800 hover:text-white transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                View Inventory
+            </a>
+
+            {% if current_user and current_user.is_admin %}
+            <a href="{{ url_for('inventory.new') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300
+                hover:bg-gray-800 hover:text-white transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Product
+            </a>
+
+            <a href="{{ url_for('reports.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300
+                hover:bg-gray-800 hover:text-white transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                View Reports
+            </a>
+
+            <a href="{{ url_for('reports.cashier_summary') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300
+                hover:bg-gray-800 hover:text-white transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Cashier Summary
+            </a>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

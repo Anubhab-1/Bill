@@ -1,0 +1,53 @@
+
+==============================================================
+  Mall Billing System -- Critical Scenario Tests
+==============================================================
+  [INFO] -- Using SQLite in-memory DB (no PostgreSQL required)
+  [INFO] -- Scenario 3 uses code analysis + sequential simulation
+
+â–¶ Scenario 1 â€” Add same product multiple times quickly
+  [PASS] -- quantity correctly accumulated to 4 (single cart entry, not 4 rows)
+  [PASS] -- cart has exactly 1 entry (no duplicate product rows)
+  [PASS] -- subtotal correct: Rs.200.00 (4 x Rs.50.00)
+
+â–¶ Scenario 2 â€” Insufficient stock rejection
+  [PASS] -- stock unchanged: 2 -> 2 (rollback worked)
+  [PASS] -- no Sale row created (transaction rolled back)
+  [PASS] â€” error message present in response
+
+â–¶ Scenario 3 â€” Two concurrent requests for last unit of stock
+  [INFO] â€” SQLite does not support SELECT FOR UPDATE.
+  [INFO] â€” Running sequential logic test + code path verification instead.
+  [PASS] -- complete() uses .with_for_update() (SELECT FOR UPDATE confirmed in code)
+  [PASS] -- product_ids sorted before locking (deadlock prevention confirmed)
+  [INFO] â€” Request-1: Sale created (2026-0001)
+  [INFO] â€” Request-2: Insufficient stock (0 < 1)
+  [PASS] -- exactly 1 sale succeeded, 1 rejected (correct sequential behaviour)
+  [PASS] -- stock never went negative (final=0)
+  [INFO] -- On PostgreSQL: FOR UPDATE serialises concurrent Tx at DB level.
+  [INFO] -- Tx B blocks on the lock until Tx A commits, then sees stock=0 -> rejects.
+
+â–¶ Scenario 4 â€” Remove item then complete sale
+  [PASS] -- both products in cart after adding
+  [PASS] -- Product B removed; only Product A remains in cart
+  [PASS] -- invoice contains only Product A (removed B not billed)
+  [PASS] -- Product A stock deducted correctly (10 -> 9)
+  [PASS] -- Product B stock untouched (still 10, was never billed)
+
+â–¶ Scenario 5 â€” Complete sale with empty cart
+  [PASS] -- no Sale created for empty cart
+  [PASS] -- "Cart is empty" error message shown to user
+  [PASS] -- empty cart guard confirmed in complete() source code
+
+==============================================================
+  SUMMARY
+==============================================================
+  [PASS]  Scenario 1 -- Duplicate add accumulates quantity
+  [PASS]  Scenario 2 -- Insufficient stock rejected
+  [PASS]  Scenario 3 -- Concurrent last-unit (code + logic)
+  [PASS]  Scenario 4 -- Remove item then complete
+  [PASS]  Scenario 5 -- Empty cart rejected
+
+  5/5 scenarios passed
+==============================================================
+

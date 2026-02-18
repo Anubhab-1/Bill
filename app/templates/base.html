@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-950">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Mall Billing System — Centralized billing and inventory management for modern malls." />
+  <title>{% block title %}{{ title }} | Mall Billing System{% endblock %}</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#1e1b4b',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="h-full font-sans antialiased text-gray-100">
+
+  {% if config.CLOUD_DEMO %}
+  <div
+    class="bg-amber-500 text-amber-950 px-4 py-1.5 text-center text-xs font-bold uppercase tracking-widest shadow-md">
+    ⚠ Demo Version — Not for Live Billing — Features Restricted
+  </div>
+  {% endif %}
+
+  <div class="flex h-full min-h-screen">
+
+    <!-- ═══════════════════════════════════════════
+         SIDEBAR
+    ════════════════════════════════════════════ -->
+    <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
+
+      <!-- Logo / Brand -->
+      <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-800">
+        <div class="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-white leading-tight">Mall Billing</p>
+          <p class="text-xs text-gray-400">Management System</p>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+        <p class="px-3 pt-2 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Main</p>
+
+        <a href="{{ url_for('main.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  {% if request.endpoint == 'main.index' %}bg-brand-600 text-white shadow
+                  {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
+                  transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Dashboard
+        </a>
+
+        <p class="px-3 pt-4 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Operations</p>
+
+        <a href="{{ url_for('billing.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  {% if request.blueprint == 'billing' %}bg-brand-600 text-white shadow
+                  {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
+                  transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+          </svg>
+          Billing
+        </a>
+
+        {% if current_user.role.value == 'admin' %}
+        <a href="{{ url_for('billing.sessions') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  {% if request.endpoint == 'billing.sessions' %}bg-brand-600 text-white shadow
+                  {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
+                  transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Cash Sessions
+        </a>
+
+        {% if not config.CLOUD_DEMO %}
+        <a href="{{ url_for('admin.backup') }}"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+          </svg>
+          Backup Database
+        </a>
+        {% endif %}
+        {% endif %}
+
+        <a href="{{ url_for('inventory.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  {% if request.blueprint == 'inventory' %}bg-brand-600 text-white shadow
+                  {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
+                  transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          Inventory
+        </a>
+
+        <a href="{{ url_for('reports.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  {% if request.blueprint == 'reports' %}bg-brand-600 text-white shadow
+                  {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
+                  transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Reports
+        </a>
+
+
+      </nav>
+
+      <!-- Sidebar Footer — user info + logout -->
+      <div class="px-4 py-4 border-t border-gray-800">
+        {% if current_user %}
+        <div class="flex items-center gap-3 mb-3">
+          <!-- Avatar initial from DB user object -->
+          <div
+            class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            {{ current_user.name[0] | upper }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs font-medium text-white truncate">{{ current_user.name }}</p>
+            <p class="text-xs text-gray-500 truncate">@{{ current_user.username }}</p>
+          </div>
+        </div>
+        <!-- Role badge -->
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if current_user.role.value == 'admin' %}bg-indigo-500/20 text-indigo-300
+            {% else %}bg-emerald-500/20 text-emerald-300{% endif %}">
+            {{ current_user.role.value | capitalize }}
+          </span>
+        </div>
+        <!-- Logout -->
+        <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium
+                  text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Sign out
+        </a>
+        {% else %}
+        <p class="text-xs text-gray-600 text-center">Phase 2 — Auth Active</p>
+        {% endif %}
+      </div>
+
+    </aside>
+
+    <!-- ═══════════════════════════════════════════
+         MAIN CONTENT AREA
+    ════════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Top Header Bar -->
+      <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h1 class="text-lg font-semibold text-white">{% block page_title %}{{ title }}{% endblock %}</h1>
+          <p class="text-xs text-gray-500 mt-0.5">{% block page_subtitle %}Mall Billing System{% endblock %}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Notification bell -->
+          <button
+            class="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </button>
+          <!-- User avatar (from DB via context processor) -->
+          {% if current_user %}
+          <div class="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center text-sm font-semibold text-white"
+            title="{{ current_user.name }} ({{ current_user.role.value }})">
+            {{ current_user.name[0] | upper }}
+          </div>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- ── Flash Messages ─────────────────────────────────── -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="px-6 pt-4 space-y-2">
+        {% for category, message in messages %}
+        <div class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium
+            {% if category == 'success' %}bg-emerald-500/10 border border-emerald-500/30 text-emerald-300
+            {% elif category == 'warning' %}bg-amber-500/10 border border-amber-500/30 text-amber-300
+            {% elif category == 'danger' or category == 'error' %}bg-red-500/10 border border-red-500/30 text-red-300
+            {% else %}bg-blue-500/10 border border-blue-500/30 text-blue-300{% endif %}">
+          <!-- Icon -->
+          {% if category == 'success' %}
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          {% elif category == 'warning' %}
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          {% else %}
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {% endif %}
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+      <!-- ─────────────────────────────────────────────────── -->
+
+      <!-- Page Content -->
+      <main class="flex-1 overflow-y-auto bg-gray-950 p-6">
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

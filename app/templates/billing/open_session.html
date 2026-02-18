@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block page_title %}Open Cash Session{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 shadow-lg">
+        <div class="flex justify-center mb-6">
+            <div class="w-16 h-16 bg-brand-900/30 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+        </div>
+
+        <h2 class="text-xl font-bold text-white text-center mb-2">Start Your Shift</h2>
+        <p class="text-gray-400 text-sm text-center mb-8">Enter the initial cash amount in your drawer.</p>
+
+        <form method="post" action="{{ url_for('billing.open_session') }}">
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Opening Cash
+                    (₹)</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
+                    <input type="number" step="0.01" name="opening_cash" required autofocus placeholder="0.00"
+                        class="w-full bg-black/50 border border-gray-700 rounded-lg pl-8 pr-4 py-3 text-white text-lg placeholder-gray-600 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all">
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full px-6 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.02]">
+                Start Session
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
