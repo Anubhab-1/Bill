@@ -46,7 +46,7 @@
 
 <body class="h-full font-sans antialiased text-gray-100">
 
-  {% if config.CLOUD_DEMO %}
+  {% if config.get('CLOUD_DEMO') %}
   <div
     class="bg-amber-500 text-amber-950 px-4 py-1.5 text-center text-xs font-bold uppercase tracking-widest shadow-md">
     ⚠ Demo Version — Not for Live Billing — Features Restricted
@@ -114,7 +114,7 @@
           Cash Sessions
         </a>
 
-        {% if not config.CLOUD_DEMO %}
+        {% if not config.get('CLOUD_DEMO') %}
         <a href="{{ url_for('admin.backup') }}"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
