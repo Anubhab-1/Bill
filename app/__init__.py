@@ -267,3 +267,13 @@ def register_commands(app):
         click.echo("✅ Demo seed complete.")
 
     return app
+
+# ── Compatibility with Render's default 'gunicorn app:app' ──
+# This allows the package to be imported as an application object directly.
+import os
+try:
+    # Only create if not main script (to avoid duplicate creation in run.py)
+    if __name__ != '__main__':
+        app = create_app(os.environ.get('FLASK_ENV', 'production'))
+except Exception:
+    pass
