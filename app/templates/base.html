@@ -103,7 +103,8 @@
           Billing
         </a>
 
-        {% if current_user.role.value == 'admin' %}
+        {% if current_user and current_user.is_authenticated and current_user.role and current_user.role.value ==
+        'admin' %}
         <a href="{{ url_for('billing.sessions') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   {% if request.endpoint == 'billing.sessions' %}bg-brand-600 text-white shadow
                   {% else %}text-gray-400 hover:bg-gray-800 hover:text-white{% endif %}
@@ -153,7 +154,7 @@
 
       <!-- Sidebar Footer — user info + logout -->
       <div class="px-4 py-4 border-t border-gray-800">
-        {% if current_user %}
+        {% if current_user.is_authenticated %}
         <div class="flex items-center gap-3 mb-3">
           <!-- Avatar initial from DB user object -->
           <div
@@ -210,7 +211,7 @@
             </svg>
           </button>
           <!-- User avatar (from DB via context processor) -->
-          {% if current_user %}
+          {% if current_user.is_authenticated %}
           <div class="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center text-sm font-semibold text-white"
             title="{{ current_user.name }} ({{ current_user.role.value }})">
             {{ current_user.name[0] | upper }}
