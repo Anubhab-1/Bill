@@ -35,6 +35,9 @@ def run_auto_migration(app):
                     # Sales: customer_id
                     conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id)"))
                     
+                    # Sales: print_html (invoice snapshot)
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS print_html TEXT"))
+                    
                     # Products: is_active
                     conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL"))
                     # Products: is_weighed
