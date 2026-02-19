@@ -185,7 +185,15 @@ def register_commands(app):
     @app.cli.command('patch-db')
     def patch_db():
         """Apply schema updates: new columns and tables."""
-        from sqlalchemy import text
+        from sqlalchemy import text, inspect
+        
+        # 0. Compare imports to ensure all models are known to SQLAlchemy
+        import app.auth.models
+        import app.inventory.models
+        import app.billing.models
+        import app.promotions.models
+        import app.customers.models
+        import app.purchasing.models
         
         # 1. Add missing tables (InventoryLog, Promotions, Customers, Returns)
         db.create_all()
@@ -193,14 +201,16 @@ def register_commands(app):
 
         # 2. Add columns to existing tables
         with db.engine.connect() as conn:
+            inspector = inspect(conn)
+            
             # Helper to check if column exists
             def column_exists(table, column):
-                try:
-                    # Generic SQL standard query (works on PG, SQLite)
-                    result = conn.execute(text(f"SELECT {column} FROM {table} LIMIT 1"))
-                    return True
-                except Exception:
-                    return False
+                headers = [c['name'] for c in inspector.get_columns(table)]
+                return column in headers
+
+            # Helper to check if table exists
+            def table_exists(table):
+                return inspector.has_table(table)
 
             # Sales: payment_method
             if not column_exists('sales', 'payment_method'):
@@ -213,10 +223,13 @@ def register_commands(app):
                 click.echo("✅ Added is_printed to sales.")
             
             # Sales: customer_id (FK)
-            if not column_exists('sales', 'customer_id'):
-                # PG-specific safe add (SQLite ignores checks mostly)
-                conn.execute(text("ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id)"))
-                click.echo("✅ Added customer_id to sales.")
+            # Critical: Ensure target table exists first
+            if table_exists('customers') and not column_exists('sales', 'customer_id'):
+                try:
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id)"))
+                    click.echo("✅ Added customer_id to sales.")
+                except Exception as e:
+                    click.echo(f"⚠️ Failed to add customer_id: {e}")
 
             # Products: is_active
             if not column_exists('products', 'is_active'):
