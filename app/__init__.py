@@ -187,28 +187,64 @@ def register_commands(app):
         """Apply schema updates: new columns and tables."""
         from sqlalchemy import text
         
-        # 1. Add missing tables (InventoryLog)
+        # 1. Add missing tables (InventoryLog, Promotions, Customers, Returns)
         db.create_all()
         click.echo("✅ Verified all tables.")
 
         # 2. Add columns to existing tables
         with db.engine.connect() as conn:
-            # Payment Method (Sales)
-            try:
+            # Helper to check if column exists
+            def column_exists(table, column):
+                try:
+                    # Generic SQL standard query (works on PG, SQLite)
+                    result = conn.execute(text(f"SELECT {column} FROM {table} LIMIT 1"))
+                    return True
+                except Exception:
+                    return False
+
+            # Sales: payment_method
+            if not column_exists('sales', 'payment_method'):
                 conn.execute(text("ALTER TABLE sales ADD COLUMN payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL"))
                 click.echo("✅ Added payment_method to sales.")
-            except Exception:
-                pass  # Ignore if exists
 
-            # Is Active (Products)
-            try:
+            # Sales: is_printed
+            if not column_exists('sales', 'is_printed'):
+                conn.execute(text("ALTER TABLE sales ADD COLUMN is_printed BOOLEAN DEFAULT FALSE"))
+                click.echo("✅ Added is_printed to sales.")
+            
+            # Sales: customer_id (FK)
+            if not column_exists('sales', 'customer_id'):
+                # PG-specific safe add (SQLite ignores checks mostly)
+                conn.execute(text("ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id)"))
+                click.echo("✅ Added customer_id to sales.")
+
+            # Products: is_active
+            if not column_exists('products', 'is_active'):
                 conn.execute(text("ALTER TABLE products ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
                 click.echo("✅ Added is_active to products.")
-            except Exception:
-                pass
+
+            # Products: is_weighed
+            if not column_exists('products', 'is_weighed'):
+                 conn.execute(text("ALTER TABLE products ADD COLUMN is_weighed BOOLEAN DEFAULT FALSE NOT NULL"))
+                 click.echo("✅ Added is_weighed to products.")
+
+            # Products: price_per_kg
+            if not column_exists('products', 'price_per_kg'):
+                 conn.execute(text("ALTER TABLE products ADD COLUMN price_per_kg NUMERIC(10,2)"))
+                 click.echo("✅ Added price_per_kg to products.")
+
+            # SaleItems: weight_kg
+            if not column_exists('sale_items', 'weight_kg'):
+                 conn.execute(text("ALTER TABLE sale_items ADD COLUMN weight_kg NUMERIC(8,3)"))
+                 click.echo("✅ Added weight_kg to sale_items.")
+
+            # SaleItems: unit_label
+            if not column_exists('sale_items', 'unit_label'):
+                 conn.execute(text("ALTER TABLE sale_items ADD COLUMN unit_label VARCHAR(10)"))
+                 click.echo("✅ Added unit_label to sale_items.")
 
             # 3. Add CHECK constraints (PostgreSQL)
-            # These might fail on SQLite (requires full table rebuild), but are critical for Prod (PG).
+            # These can fail if data violates them, so we wrap comfortably.
             constraints = [
                 ("check_stock_non_negative", "ALTER TABLE products ADD CONSTRAINT check_stock_non_negative CHECK (stock >= 0)"),
                 ("check_price_positive",     "ALTER TABLE products ADD CONSTRAINT check_price_positive CHECK (price > 0)"),
@@ -220,8 +256,9 @@ def register_commands(app):
                     conn.execute(text(sql))
                     click.echo(f"✅ Added constraint: {name}")
                 except Exception:
-                    # Constraint likely exists or DB doesn't support ALTER TABLE ADD CONSTRAINT
                     pass
+
+            conn.commit()
 
         click.echo("✅ Schema patch complete.")
 
