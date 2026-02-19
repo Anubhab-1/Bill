@@ -160,156 +160,82 @@
 
     </div>
 
-</div>
+    <!-- ══ Modal moved inside content block to ensure rendering ══ -->
+    <div id="new-customer-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"
+                onclick="document.getElementById('new-customer-modal').classList.add('hidden')"></div>
 
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-    // ── Scanner Hardening (Debounce & Focus) ──────────────────────
-    let lastScanTime = 0;
-    const DEBOUNCE_MS = 200; // Ignore scans faster than this (prevent double-beep)
-
-    document.body.addEventListener('htmx:configRequest', function (evt) {
-        // Only debounce the barcode form
-        if (evt.target.id === 'barcode-form') {
-            const now = Date.now();
-            if (now - lastScanTime < DEBOUNCE_MS) {
-                evt.preventDefault();
-                console.warn("Ignored duplicate scan (debounced)");
-                return false;
-            }
-            lastScanTime = now;
-        }
-    });
-
-    // ── Focus Management ──
-    const focusBarcode = () => {
-        const input = document.getElementById('barcode-input');
-        if (!input) return;
-
-        // Don't steal focus if user is typing in a quantity input or pressing buttons
-        const active = document.activeElement;
-        const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && active.id !== 'barcode-input';
-
-        if (!isTyping) {
-            input.focus();
-        }
-    };
-
-    // Re-focus on critical events
-    document.body.addEventListener('htmx:afterSwap', focusBarcode);
-    document.body.addEventListener('htmx:load', focusBarcode);
-    window.addEventListener('load', focusBarcode);
-
-    // ── Keyboard shortcuts ────────────────────────────────────────
-    document.addEventListener('keydown', function (e) {
-        // F2 → focus barcode input
-        if (e.key === 'F2') {
-            e.preventDefault();
-            document.getElementById('barcode-input').focus();
-        }
-        // F9 → submit complete-sale form (if modal closed) or just click button
-        if (e.key === 'F9') {
-            e.preventDefault();
-            const btn = document.getElementById('complete-sale-btn');
-            if (btn && !btn.disabled) btn.click();
-        }
-        // Esc -> Cancel modal or clear input
-        if (e.key === 'Escape') {
-            // If modal open, close it (handled by modal logic inside _cart usually?)
-            // If manual modal logic exists globally:
-            const modal = document.getElementById('payment-modal');
-            if (modal && !modal.classList.contains('hidden')) {
-                closePaymentModal(); // function defined in _cart.html script
-                focusBarcode();
-                return;
-            }
-            // Else clear input
-            const input = document.getElementById('barcode-input');
-            if (document.activeElement === input) {
-                input.value = '';
-            } else {
-                focusBarcode();
-            }
-        }
-    });
-</script>
-{% endblock %}
-
-<div id="new-customer-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
-    role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"
-            onclick="document.getElementById('new-customer-modal').classList.add('hidden')"></div>
-
-        <!-- Modal panel -->
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div
-            class="inline-block align-bottom bg-gray-900 border border-gray-700 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-            <div class="p-6">
-                <h3 class="text-lg font-bold text-white mb-4">Register New Customer</h3>
-                <form id="new-customer-form">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1">Name</label>
-                            <input type="text" name="name" required
-                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+            <!-- Modal panel -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-gray-900 border border-gray-700 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Register New Customer</h3>
+                    <form id="new-customer-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Name</label>
+                                <input type="text" name="name" required
+                                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Mobile Number</label>
+                                <input type="tel" name="phone" required
+                                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Email <span
+                                        class="text-gray-600">(Optional)</span></label>
+                                <input type="email" name="email"
+                                    class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1">Mobile Number</label>
-                            <input type="tel" name="phone" required
-                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button type="button"
+                                onclick="document.getElementById('new-customer-modal').classList.add('hidden')"
+                                class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                            <button type="submit"
+                                class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium">Create
+                                Customer</button>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1">Email <span
-                                    class="text-gray-600">(Optional)</span></label>
-                            <input type="email" name="email"
-                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
-                        </div>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button"
-                            onclick="document.getElementById('new-customer-modal').classList.add('hidden')"
-                            class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium">Create
-                            Customer</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('new-customer-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(this));
+
+            fetch('/customers/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        // Auto attach
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = "{{ url_for('billing.attach_customer') }}";
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'customer_id';
+                        input.value = data.id;
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+        });
+    </script>
 </div>
-
-<script>
-    document.getElementById('new-customer-form').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const data = Object.fromEntries(new FormData(this));
-
-        fetch('/customers/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    // Auto attach
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ url_for('billing.attach_customer') }}";
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'customer_id';
-                    input.value = data.id;
-                    form.appendChild(input);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-    });
-</script>
+{% endblock %}
