@@ -59,6 +59,17 @@
         </div>
 
         <div class="mt-4 grid grid-cols-2 gap-3">
+            <button onclick="document.getElementById('new-customer-modal').showModal()"
+                class="col-span-2 block w-full text-center px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white border border-brand-600 rounded-lg transition-colors text-sm font-medium shadow-lg shadow-brand-500/20 mb-2">
+                <span class="flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Register New Customer
+                </span>
+            </button>
+
             <a href="{{ url_for('billing.returns_search') }}"
                 class="block w-full text-center px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-lg transition-colors text-sm font-medium">
                 Process Return
@@ -107,7 +118,7 @@
                 <div class="flex gap-2">
                     <input type="text" x-model="query"
                         @input.debounce.300ms="if(query.length > 2) fetch(`/customers/search?q=${query}`).then(r=>r.json()).then(d=>results=d); else results=[]"
-                        placeholder="Search Name or Phone..."
+                        placeholder="Search by Mobile Number..."
                         class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
 
                     <!-- Create New Button (Trigger Modal) -->
