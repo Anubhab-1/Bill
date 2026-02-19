@@ -38,6 +38,12 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
     # ── Error Handlers ────────────────────────────────────────────
+    @app.errorhandler(500)
+    def internal_error(e):
+        db.session.rollback() # Ensure valid state for next request
+        from flask import render_template
+        return render_template('errors/500.html', title='Server Error', error=e), 500
+
     @app.errorhandler(403)
     def forbidden(e):
         from flask import render_template
@@ -48,10 +54,15 @@ def create_app(config_name='default'):
         from flask import render_template
         return render_template('errors/404.html', title='Page Not Found'), 404
 
-    @app.errorhandler(500)
-    def internal_error(e):
+    from sqlalchemy.exc import OperationalError
+    @app.errorhandler(OperationalError)
+    def db_error(e):
+        """Handle lost DB connections gracefully."""
+        db.session.rollback()
+        # Log critical database failure
+        app.logger.error(f"Database Connectivity Lost: {e}")
         from flask import render_template
-        return render_template('errors/500.html', title='Server Error'), 500
+        return render_template('errors/500_db.html', title='Database Error'), 503
 
     # ── Context Processor ─────────────────────────────────────────
     @app.context_processor

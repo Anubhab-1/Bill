@@ -11,6 +11,10 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 300,
         "pool_pre_ping": True,
+        # Production resilience settings
+        "pool_size": 20,       # Base number of connections
+        "max_overflow": 10,    # Extra connections allowed during spikes
+        "pool_timeout": 30,    # Seconds to wait for a connection
     }
     # Sessions expire after 8 hours (one work shift)
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)

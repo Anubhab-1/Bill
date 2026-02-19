@@ -345,6 +345,12 @@ def complete():
         flash('A database error occurred. Please try again.', 'error')
         return redirect(url_for('billing.index'))
 
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(f"Sale rollback (Unexpected Error): {exc}")
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('billing.index'))
+
 
 # ── PRINTABLE INVOICE ─────────────────────────────────────────────
 

@@ -14,6 +14,19 @@ from app.main import main
 from app.auth.decorators import login_required
 
 
+@main.route("/health")
+def health():
+    """Health check for load balancers and monitoring."""
+    from datetime import datetime
+    try:
+        from sqlalchemy import text
+        db.session.execute(text("SELECT 1"))
+        return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}, 200
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"Health check failed: {e}")
+        return {"status": "error", "reason": str(e)}, 500
+
 @main.route('/')
 @login_required
 def index():

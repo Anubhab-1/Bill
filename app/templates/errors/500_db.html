@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Database Connection Error{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[500px]">
+    <div class="text-center max-w-lg">
+        <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+        </div>
+
+        <h1 class="text-2xl font-bold text-white mb-2">Database Connection Lost</h1>
+        <p class="text-gray-400 mb-8">
+            The application cannot communicate with the database. This is usually temporary.
+            <br>Please try refreshing the page in a moment.
+        </p>
+
+        <div class="flex items-center justify-center gap-4">
+            <button onclick="window.location.reload()"
+                class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors">
+                Try Again
+            </button>
+            <a href="{{ url_for('main.index') }}"
+                class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition-colors">
+                Go to Dashboard
+            </a>
+        </div>
+
+        <!-- Technical details (hidden by default, maybe show if admin?) -->
+        <!-- Logged in logs -->
+    </div>
+</div>
+{% endblock %}
