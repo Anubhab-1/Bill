@@ -59,7 +59,7 @@
         </div>
 
         <div class="mt-4 grid grid-cols-2 gap-3">
-            <button onclick="document.getElementById('new-customer-modal').showModal()"
+            <button onclick="document.getElementById('new-customer-modal').classList.remove('hidden')"
                 class="col-span-2 block w-full text-center px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white border border-brand-600 rounded-lg transition-colors text-sm font-medium shadow-lg shadow-brand-500/20 mb-2">
                 <span class="flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +122,7 @@
                         class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
 
                     <!-- Create New Button (Trigger Modal) -->
-                    <button onclick="document.getElementById('new-customer-modal').showModal()"
+                    <button onclick="document.getElementById('new-customer-modal').classList.remove('hidden')"
                         class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
@@ -237,39 +237,51 @@
 </script>
 {% endblock %}
 
-<dialog id="new-customer-modal"
-    class="bg-gray-900 border border-gray-700 rounded-xl p-0 w-full max-w-md backdrop:bg-black/80">
-    <div class="p-6">
-        <h3 class="text-lg font-bold text-white mb-4">New Customer</h3>
-        <form id="new-customer-form">
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Name</label>
-                    <input type="text" name="name" required
-                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Phone</label>
-                    <input type="tel" name="phone" required
-                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Email <span
-                            class="text-gray-600">(Optional)</span></label>
-                    <input type="email" name="email"
-                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
-                </div>
+<div id="new-customer-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+    role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"
+            onclick="document.getElementById('new-customer-modal').classList.add('hidden')"></div>
+
+        <!-- Modal panel -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div
+            class="inline-block align-bottom bg-gray-900 border border-gray-700 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-white mb-4">Register New Customer</h3>
+                <form id="new-customer-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Name</label>
+                            <input type="text" name="name" required
+                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Mobile Number</label>
+                            <input type="tel" name="phone" required
+                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Email <span
+                                    class="text-gray-600">(Optional)</span></label>
+                            <input type="email" name="email"
+                                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button type="button"
+                            onclick="document.getElementById('new-customer-modal').classList.add('hidden')"
+                            class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium">Create
+                            Customer</button>
+                    </div>
+                </form>
             </div>
-            <div class="mt-6 flex justify-end gap-3">
-                <button type="button" onclick="this.closest('dialog').close()"
-                    class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                <button type="submit"
-                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium">Create
-                    Customer</button>
-            </div>
-        </form>
+        </div>
     </div>
-</dialog>
+</div>
 
 <script>
     document.getElementById('new-customer-form').addEventListener('submit', function (e) {
