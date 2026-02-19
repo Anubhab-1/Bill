@@ -140,7 +140,7 @@ def gst_report():
     
     output_tax_data = db.session.query(
         Product.gst_percent,
-        func.sum(SaleItem.quantity * SaleItem.price)
+        func.sum(SaleItem.subtotal)
     ).join(Product, SaleItem.product_id == Product.id)\
      .join(Sale, SaleItem.sale_id == Sale.id)\
      .filter(

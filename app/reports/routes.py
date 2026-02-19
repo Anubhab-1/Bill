@@ -253,6 +253,9 @@ def export_csv():
     cashier_id_str = request.args.get('cashier', '')
 
     # Fetch ALL matching rows (no pagination for export)
+    # Note: 'items' is a backref from SaleItem, so we access it as attribute on instance,
+    # but for query options on the class, we need to be careful.
+    # Safe bet: separate query or standard lazy loading.
     q = Sale.query.order_by(desc(Sale.created_at))
     q, _, _, _ = _apply_filters(q, start_str, end_str, cashier_id_str)
     sales = q.all()

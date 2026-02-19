@@ -750,10 +750,11 @@ def mark_printed(sale_id):
 @login_required
 def print_queue():
     """List sales from today that haven't been marked as printed."""
-    today = date.today()
-    # Filter: created_at >= today AND is_printed is False
+    # Filter: created_at >= last 7 days AND is_printed is False
+    # This ensures pending prints don't disappear at midnight
+    cutoff = today - timedelta(days=7)
     sales = Sale.query.filter(
-        cast(Sale.created_at, Date) == today,
+        Sale.created_at >= cutoff,
         Sale.is_printed == False
     ).order_by(desc(Sale.created_at)).all()
     

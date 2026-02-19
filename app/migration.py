@@ -11,7 +11,7 @@ def run_auto_migration(app):
     """
     with app.app_context():
         try:
-            logger.info("🔄 Checking database schema (Robust Mode)...")
+            logger.info("[INFO] Checking database schema (Robust Mode)...")
             
             # 0. Ensure models allowed
             import app.auth.models
@@ -51,9 +51,9 @@ def run_auto_migration(app):
                     conn.execute(text("ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS unit_label VARCHAR(10)"))
 
                     conn.commit()
-                    logger.info("✅ Database schema patched successfully.")
+                    logger.info("[OK] Database schema patched successfully.")
                 except Exception as e:
-                    logger.error(f"⚠️ SQL Patch warning: {e}")
+                    logger.error(f"[WARN] SQL Patch warning: {e}")
 
         except Exception as e:
-            logger.error(f"❌ Migration wrapper failed: {e}")
+            logger.error(f"[ERROR] Migration wrapper failed: {e}")

@@ -3297,3 +3297,209 @@
 2026-02-19 23:49:13,237 | INFO | app | None | None | Mall Billing System startup
 2026-02-19 23:49:13,776 | INFO | app | None | None | Mall Billing System startup
 2026-02-19 23:49:13,776 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:14:47,572 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:16:52,628 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:16:52,767 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:16:52,767 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:17:43,029 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:18:16,746 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:18:31,297 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:18:56,547 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:27,082 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:27,195 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:27,195 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:42,358 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:42,459 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:42,459 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:19:42,651 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,651 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,732 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,732 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,818 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,818 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,902 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:42,902 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:43,021 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:19:43,021 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,460 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:10,552 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:10,552 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:10,741 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,741 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,834 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,834 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,926 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:10,926 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:11,010 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:11,010 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:11,125 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:11,125 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:16,923 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:17,029 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:17,029 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:17,190 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:17,190 | WARNING | app | 127.0.0.1 | http://localhost/auth/login | Failed login attempt for username: admin
+2026-02-20 03:20:37,608 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:37,710 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:37,710 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:20:38,102 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,102 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,320 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,320 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,510 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,510 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,676 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,676 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,868 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:20:38,868 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:13,702 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:13,831 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:13,831 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:14,192 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,192 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,414 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,414 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,605 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,605 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,785 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,785 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,987 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:14,987 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:39,909 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:40,009 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:40,009 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:24:40,338 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,338 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,548 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,548 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,728 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,728 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,903 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:40,903 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:41,077 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:24:41,077 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,118 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:25:52,139 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:25:52,190 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:25:52,213 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:25:52,213 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:25:52,215 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:25:52,215 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:25:52,217 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:25:52,217 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:25:52,518 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,518 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,721 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,721 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,909 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:52,909 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:53,086 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:53,086 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:53,250 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:25:53,250 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:11,762 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:27:11,785 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:27:11,845 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:27:11,879 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:27:11,879 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:27:11,881 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:27:11,881 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:27:11,883 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:27:11,883 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:27:12,222 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,222 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,442 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,442 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,631 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,631 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,813 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:12,813 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:13,168 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:27:13,168 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:40,584 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:31:40,598 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:31:40,659 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:31:40,685 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:31:40,685 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:31:40,687 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:31:40,687 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:31:40,689 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:31:40,689 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:31:41,018 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,018 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,239 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,239 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,424 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,424 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,592 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,592 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,797 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:31:41,797 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:33,271 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:32:33,294 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:32:33,355 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:32:33,379 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:32:33,379 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:32:33,380 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:32:33,380 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:32:33,383 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:32:33,383 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:32:33,679 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:33,679 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:33,888 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:33,888 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,075 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,075 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,247 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,247 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,458 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:32:34,458 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:21,187 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:33:21,215 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:33:21,303 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:33:21,346 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:33:21,346 | INFO | app | None | None | Mall Billing System startup
+2026-02-20 03:33:21,347 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:33:21,347 | INFO | app.migration | None | None | [INFO] Checking database schema (Robust Mode)...
+2026-02-20 03:33:21,352 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:33:21,352 | ERROR | app.migration | None | None | [WARN] SQL Patch warning: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 03:33:21,782 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:21,782 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,075 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,075 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,356 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,356 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,598 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,598 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,907 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
+2026-02-20 03:33:22,907 | INFO | app | 127.0.0.1 | http://localhost/auth/login | User test_admin logged in successfully.
