@@ -37,10 +37,23 @@ def create_app(config_name='default'):
     from app.admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
+    from app.purchasing import purchasing as purchasing_blueprint
+    app.register_blueprint(purchasing_blueprint, url_prefix='/purchasing')
+
+    from app.promotions import promotions as promotions_blueprint
+    app.register_blueprint(promotions_blueprint, url_prefix='/promotions')
+
+    from app.reporting import reporting as reporting_blueprint
+    app.register_blueprint(reporting_blueprint, url_prefix='/reporting')
+
+    from app.customers import customers as customers_blueprint
+    app.register_blueprint(customers_blueprint, url_prefix='/customers')
+    
     # ── Error Handlers ────────────────────────────────────────────
     @app.errorhandler(500)
     def internal_error(e):
         db.session.rollback() # Ensure valid state for next request
+        app.logger.error(f"Internal Server Error: {e}", exc_info=True)
         from flask import render_template
         return render_template('errors/500.html', title='Server Error', error=e), 500
 

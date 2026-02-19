@@ -67,6 +67,20 @@ def validate_product_form(form_data: dict, existing_barcode: str = None) -> dict
     except ValueError:
         errors['gst_percent'] = 'GST must be a whole number.'
 
+    # ── is_weighed / price_per_kg ───────────────────────────────────
+    is_weighed = form_data.get('is_weighed') in ('1', 'true', 'on', 'yes', True)
+    ppk_raw = form_data.get('price_per_kg', '').strip()
+    if is_weighed:
+        if not ppk_raw:
+            errors['price_per_kg'] = 'Price per kg is required for weighed items.'
+        else:
+            try:
+                ppk = Decimal(ppk_raw)
+                if ppk <= 0:
+                    errors['price_per_kg'] = 'Price per kg must be greater than zero.'
+            except InvalidOperation:
+                errors['price_per_kg'] = 'Price per kg must be a valid number.'
+
     return errors
 
 
@@ -76,10 +90,14 @@ def parse_product_form(form_data: dict) -> dict:
     Call only after validate_product_form returns no errors.
     """
     from decimal import Decimal
+    is_weighed = form_data.get('is_weighed') in ('1', 'true', 'on', 'yes', True)
+    ppk_raw = form_data.get('price_per_kg', '').strip()
     return {
-        'name':        form_data.get('name', '').strip(),
-        'barcode':     form_data.get('barcode', '').strip(),
-        'price':       Decimal(form_data.get('price', '0').strip()),
-        'stock':       int(form_data.get('stock', '0').strip()),
-        'gst_percent': int(form_data.get('gst_percent', '0').strip()),
+        'name':         form_data.get('name', '').strip(),
+        'barcode':      form_data.get('barcode', '').strip(),
+        'price':        Decimal(form_data.get('price', '0').strip()),
+        'stock':        int(form_data.get('stock', '0').strip()),
+        'gst_percent':  int(form_data.get('gst_percent', '0').strip()),
+        'is_weighed':   is_weighed,
+        'price_per_kg': Decimal(ppk_raw) if ppk_raw else None,
     }

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Batches — {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-5xl mx-auto">
+
+    {# ── Header ── #}
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-white">{{ product.name }}</h1>
+            <p class="text-slate-400 text-sm mt-1">Barcode: {{ product.barcode }} · Total Stock: {{ product.stock }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('inventory.add_batch', product_id=product.id) }}"
+                class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition">
+                ＋ Receive Stock
+            </a>
+            <a href="{{ url_for('inventory.index') }}"
+                class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition">
+                ← Back
+            </a>
+        </div>
+    </div>
+
+    {# ── Flash Messages ── #}
+    {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="mb-4 px-4 py-3 rounded-lg
+    {% if cat == 'success' %}bg-emerald-900 text-emerald-200{% else %}bg-red-900 text-red-200{% endif %}">
+        {{ msg }}
+    </div>
+    {% endfor %}
+
+    {# ── Batch Table ── #}
+    {% if batches %}
+    <div class="bg-slate-800 rounded-xl overflow-hidden shadow-lg">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-slate-700 text-slate-300 uppercase text-xs">
+                <tr>
+                    <th class="px-4 py-3">Batch #</th>
+                    <th class="px-4 py-3">Expiry Date</th>
+                    <th class="px-4 py-3">Days Left</th>
+                    <th class="px-4 py-3 text-right">Qty</th>
+                    <th class="px-4 py-3 text-right">Cost Price</th>
+                    <th class="px-4 py-3">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-700">
+                {% for b in batches %}
+                {% set days = b.days_to_expiry %}
+                <tr
+                    class="{% if b.is_expired %}bg-red-950/40{% elif days is not none and days <= 14 %}bg-amber-950/40{% else %}hover:bg-slate-700/50{% endif %} transition">
+                    <td class="px-4 py-3 font-mono text-slate-200">{{ b.batch_number }}</td>
+                    <td class="px-4 py-3 text-slate-300">
+                        {% if b.expiry_date %}{{ b.expiry_date.strftime('%d %b %Y') }}{% else %}<span
+                            class="text-slate-500">—</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if days is none %}
+                        <span class="text-slate-500 text-xs">No expiry</span>
+                        {% elif days < 0 %} <span class="text-red-400 font-semibold text-xs">Expired {{ (-days) }}d
+                            ago</span>
+                            {% elif days <= 14 %} <span class="text-amber-400 font-semibold text-xs">{{ days }}d</span>
+                                {% else %}
+                                <span class="text-slate-400 text-xs">{{ days }}d</span>
+                                {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold text-slate-100">{{ b.quantity }}</td>
+                    <td class="px-4 py-3 text-right text-slate-300">
+                        {% if b.cost_price %}₹{{ "%.2f"|format(b.cost_price|float) }}{% else %}<span
+                            class="text-slate-500">—</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if b.is_expired %}
+                        <span class="px-2 py-0.5 rounded-full bg-red-900 text-red-300 text-xs">Expired</span>
+                        {% elif days is not none and days <= 14 %} <span
+                            class="px-2 py-0.5 rounded-full bg-amber-900 text-amber-300 text-xs">Expiring Soon</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-900 text-emerald-300 text-xs">OK</span>
+                            {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-slate-800 rounded-xl p-10 text-center text-slate-400">
+        No batches found. <a href="{{ url_for('inventory.add_batch', product_id=product.id) }}"
+            class="text-emerald-400 underline ml-1">Receive stock →</a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

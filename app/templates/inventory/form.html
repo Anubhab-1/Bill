@@ -102,7 +102,7 @@ endblock %}
             </div>
 
             <!-- ── Stock ──────────────────────────────────────────────── -->
-            <div class="mb-8">
+            <div class="mb-5">
                 <label for="stock" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
                     Stock Quantity
                 </label>
@@ -114,6 +114,40 @@ endblock %}
                 {% if errors.get('stock') %}
                 <p class="mt-1.5 text-xs text-red-400">{{ errors.stock }}</p>
                 {% endif %}
+            </div>
+
+            <!-- ── Weighed Item ───────────────────────────────────────── -->
+            <div class="mb-8 p-4 bg-gray-800/50 border border-gray-700 rounded-xl">
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input id="is_weighed" name="is_weighed" type="checkbox" value="on"
+                        onchange="document.getElementById('ppk-row').classList.toggle('hidden', !this.checked)"
+                        {{ 'checked' if form_data.get('is_weighed') in ('on','1','true',True) else '' }}
+                        class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-brand-500 focus:ring-brand-500">
+                    <span class="text-sm font-medium text-gray-300">⚖ Weighed Item (sold by kg)</span>
+                </label>
+                <p class="text-xs text-gray-500 mt-1 ml-7">
+                    For items like grains, meat, or produce priced per kilogram.
+                    Cashiers will enter weight at billing time.
+                </p>
+
+                <!-- Price per kg (shown only when is_weighed is checked) -->
+                <div id="ppk-row" class="mt-4 {{ 'hidden' if not form_data.get('is_weighed') else '' }}">
+                    <label for="price_per_kg"
+                        class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                        Price per kg (₹) <span class="text-red-400">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                        <input id="price_per_kg" name="price_per_kg" type="number" step="0.01" min="0.01"
+                            value="{{ form_data.get('price_per_kg', '') }}" placeholder="0.00" class="w-full bg-gray-800 border rounded-lg pl-7 pr-4 py-2.5 text-sm text-white
+                             placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                             focus:border-transparent transition-colors
+                             {{ 'border-red-500' if errors.get('price_per_kg') else 'border-gray-700' }}" />
+                    </div>
+                    {% if errors.get('price_per_kg') %}
+                    <p class="mt-1.5 text-xs text-red-400">{{ errors.price_per_kg }}</p>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- ── Actions ────────────────────────────────────────────── -->

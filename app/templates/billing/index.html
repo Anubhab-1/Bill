@@ -17,7 +17,8 @@
             </p>
 
             <!-- HTMX form — posts to /billing/add-item, swaps #cart-section -->
-            <form hx-post="{{ url_for('billing.add_item') }}" hx-target="#cart-section" hx-swap="innerHTML"
+            <form id="barcode-form" hx-post="{{ url_for('billing.add_item') }}" hx-target="#cart-section"
+                hx-swap="innerHTML"
                 hx-on::after-request="this.reset(); document.getElementById('barcode-input').focus();">
                 <div class="flex gap-3">
                     <input id="barcode-input" name="barcode" type="text" placeholder="Barcode…" autocomplete="off"
@@ -57,17 +58,90 @@
             </div>
         </div>
 
-        <div class="mt-2">
+        <div class="mt-4 grid grid-cols-2 gap-3">
+            <a href="{{ url_for('billing.returns_search') }}"
+                class="block w-full text-center px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-lg transition-colors text-sm font-medium">
+                Process Return
+            </a>
+            <a href="{{ url_for('billing.print_queue') }}"
+                class="block w-full text-center px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-lg transition-colors text-sm font-medium">
+                Print Queue
+            </a>
             <a href="{{ url_for('billing.close_session') }}"
-                class="block w-full text-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg transition-colors text-sm font-medium">
-                Close Shift / Reconcile
+                class="col-span-2 block w-full text-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg transition-colors text-sm font-medium">
+                Close Shift
             </a>
         </div>
 
     </div>
 
     <!-- ══ RIGHT: Cart ══════════════════════════════════════════════ -->
-    <div class="xl:col-span-3 flex flex-col">
+    <div class="xl:col-span-3 flex flex-col gap-4">
+
+        <!-- Customer Section -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            {% if customer %}
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="px-2 py-0.5 rounded bg-brand-900 text-brand-300 text-xs font-bold uppercase">Customer</span>
+                        <span class="text-white font-medium">{{ customer.name }}</span>
+                    </div>
+                    <div class="mt-1 flex gap-3 text-xs text-gray-400">
+                        <span>{{ customer.phone }}</span>
+                        <span class="text-brand-400 font-bold">{{ customer.points }} Pts</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('billing.detach_customer') }}"
+                    class="p-2 text-gray-500 hover:text-red-400 transition-colors" title="Detach">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </a>
+            </div>
+            {% else %}
+            <div x-data="{ query: '', results: [] }" class="relative">
+                <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Customer Loyalty</label>
+                <div class="flex gap-2">
+                    <input type="text" x-model="query"
+                        @input.debounce.300ms="if(query.length > 2) fetch(`/customers/search?q=${query}`).then(r=>r.json()).then(d=>results=d); else results=[]"
+                        placeholder="Search Name or Phone..."
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors">
+
+                    <!-- Create New Button (Trigger Modal) -->
+                    <button onclick="document.getElementById('new-customer-modal').showModal()"
+                        class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Search Results Dropdown -->
+                <div x-show="results.length > 0" @click.away="results = []"
+                    class="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    <template x-for="c in results" :key="c.id">
+                        <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700 last:border-0"
+                            @click="$el.closest('form').submit()">
+                            <form action="{{ url_for('billing.attach_customer') }}" method="POST">
+                                <input type="hidden" name="customer_id" :value="c.id">
+                                <button type="submit" class="w-full text-left">
+                                    <div class="font-medium text-white" x-text="c.name"></div>
+                                    <div class="text-xs text-gray-400 flex justify-between">
+                                        <span x-text="c.phone"></span>
+                                        <span x-text="c.points + ' Pts'" class="text-brand-400"></span>
+                                    </div>
+                                </button>
+                            </form>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            {% endif %}
+        </div>
 
         <div id="cart-section">
             {% include 'billing/_cart.html' %}
@@ -81,6 +155,42 @@
 
 {% block extra_scripts %}
 <script>
+    // ── Scanner Hardening (Debounce & Focus) ──────────────────────
+    let lastScanTime = 0;
+    const DEBOUNCE_MS = 200; // Ignore scans faster than this (prevent double-beep)
+
+    document.body.addEventListener('htmx:configRequest', function (evt) {
+        // Only debounce the barcode form
+        if (evt.target.id === 'barcode-form') {
+            const now = Date.now();
+            if (now - lastScanTime < DEBOUNCE_MS) {
+                evt.preventDefault();
+                console.warn("Ignored duplicate scan (debounced)");
+                return false;
+            }
+            lastScanTime = now;
+        }
+    });
+
+    // ── Focus Management ──
+    const focusBarcode = () => {
+        const input = document.getElementById('barcode-input');
+        if (!input) return;
+
+        // Don't steal focus if user is typing in a quantity input or pressing buttons
+        const active = document.activeElement;
+        const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && active.id !== 'barcode-input';
+
+        if (!isTyping) {
+            input.focus();
+        }
+    };
+
+    // Re-focus on critical events
+    document.body.addEventListener('htmx:afterSwap', focusBarcode);
+    document.body.addEventListener('htmx:load', focusBarcode);
+    window.addEventListener('load', focusBarcode);
+
     // ── Keyboard shortcuts ────────────────────────────────────────
     document.addEventListener('keydown', function (e) {
         // F2 → focus barcode input
@@ -88,20 +198,95 @@
             e.preventDefault();
             document.getElementById('barcode-input').focus();
         }
-        // F9 → submit complete-sale form
+        // F9 → submit complete-sale form (if modal closed) or just click button
         if (e.key === 'F9') {
             e.preventDefault();
             const btn = document.getElementById('complete-sale-btn');
             if (btn && !btn.disabled) btn.click();
         }
-    });
-
-    // Re-focus barcode input after every HTMX swap
-    document.body.addEventListener('htmx:afterSwap', function (e) {
-        if (e.detail.target.id === 'cart-section') {
+        // Esc -> Cancel modal or clear input
+        if (e.key === 'Escape') {
+            // If modal open, close it (handled by modal logic inside _cart usually?)
+            // If manual modal logic exists globally:
+            const modal = document.getElementById('payment-modal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closePaymentModal(); // function defined in _cart.html script
+                focusBarcode();
+                return;
+            }
+            // Else clear input
             const input = document.getElementById('barcode-input');
-            if (input) input.focus();
+            if (document.activeElement === input) {
+                input.value = '';
+            } else {
+                focusBarcode();
+            }
         }
     });
 </script>
 {% endblock %}
+
+<dialog id="new-customer-modal"
+    class="bg-gray-900 border border-gray-700 rounded-xl p-0 w-full max-w-md backdrop:bg-black/80">
+    <div class="p-6">
+        <h3 class="text-lg font-bold text-white mb-4">New Customer</h3>
+        <form id="new-customer-form">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Name</label>
+                    <input type="text" name="name" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Phone</label>
+                    <input type="tel" name="phone" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Email <span
+                            class="text-gray-600">(Optional)</span></label>
+                    <input type="email" name="email"
+                        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white focus:border-brand-500 outline-none">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="this.closest('dialog').close()"
+                    class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                <button type="submit"
+                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium">Create
+                    Customer</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    document.getElementById('new-customer-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this));
+
+        fetch('/customers/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Auto attach
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ url_for('billing.attach_customer') }}";
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'customer_id';
+                    input.value = data.id;
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+    });
+</script>

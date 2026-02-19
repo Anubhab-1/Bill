@@ -299,3 +299,61 @@ def export_csv():
             'Content-Type': 'text/csv; charset=utf-8',
         }
     )
+
+# ═══════════════════════════════════════════════════════════════════
+# 5. RECONCILIATION REPORT (Split Tenders)
+# ═══════════════════════════════════════════════════════════════════
+
+@reports.route('/reconciliation')
+@admin_required
+def reconciliation():
+    """
+    Daily breakdown of payments by method (Cash, Card, UPI, etc.).
+    """
+    from app.billing.models import SalePayment
+    
+    start_str = request.args.get('start', date.today().strftime('%Y-%m-%d'))
+    end_str   = request.args.get('end', date.today().strftime('%Y-%m-%d'))
+    
+    try:
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+        end_date   = datetime.strptime(end_str, '%Y-%m-%d').date()
+    except ValueError:
+        start_date = date.today()
+        end_date   = date.today()
+
+    # Query: Sum amounts by payment_method, within date range
+    rows = (
+        db.session.query(
+            SalePayment.payment_method,
+            func.count(SalePayment.id).label('tx_count'),
+            func.sum(SalePayment.amount).label('total_amount'),
+        )
+        .join(Sale)
+        .filter(cast(Sale.created_at, Date) >= start_date)
+        .filter(cast(Sale.created_at, Date) <= end_date)
+        .group_by(SalePayment.payment_method)
+        .order_by(desc('total_amount'))
+        .all()
+    )
+
+    report_data = []
+    total_collected = Decimal('0')
+    
+    for r in rows:
+        amount = Decimal(str(r.total_amount or 0))
+        report_data.append({
+            'method': r.payment_method,
+            'count':  r.tx_count,
+            'amount': amount,
+        })
+        total_collected += amount
+
+    return render_template(
+        'reports/reconciliation.html',
+        title='Reconciliation Report',
+        report_data=report_data,
+        total_collected=total_collected,
+        start_str=start_str,
+        end_str=end_str,
+    )

@@ -1,0 +1,79 @@
+{#
+_weight_modal.html — HTMX OOB swap fragment
+Appended to the _cart.html response when a weighed item barcode is scanned.
+Renders an absolutely-positioned overlay modal that asks for weight in kg.
+On submit -> POST /billing/add-weighed-item -> returns refreshed _cart.html.
+#}
+<div id="weight-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+    hx-swap-oob="true">
+
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-sm shadow-2xl" id="weight-modal">
+
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h2 class="text-lg font-bold text-white">Enter Weight</h2>
+                <p class="text-sm text-slate-400 mt-0.5">{{ product.name }}</p>
+            </div>
+            <span class="text-2xl">&#9878;&#65039;</span>
+        </div>
+
+        <div class="mb-4 bg-slate-800 rounded-lg px-4 py-2 text-xs text-slate-400 flex justify-between">
+            <span>Rate:</span>
+            <span class="font-semibold text-slate-200">&#8377;{{ "%.2f"|format(product.price_per_kg|float) }} /
+                kg</span>
+        </div>
+
+        {# Scale API placeholder — hook for future serial/BT integration.
+        To integrate: fire a JS event 'scale-reading' with detail.weight_kg
+        and the listener below will auto-fill the input. #}
+
+        <form hx-post="{{ url_for('billing.add_weighed_item') }}" hx-target="#cart-panel" hx-swap="innerHTML"
+            hx-on::after-request="document.getElementById('weight-modal-overlay').remove()" class="space-y-4">
+
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">
+                    Weight (kg)
+                </label>
+                <input id="weight-input" type="number" name="weight_kg" step="0.001" min="0.001"
+                    placeholder="e.g. 0.850" autofocus class="w-full bg-slate-800 text-white text-xl font-mono text-center
+                      border border-slate-600 rounded-xl px-4 py-3
+                      focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+                <p class="text-xs text-slate-500 mt-1 text-center">Enter in kilograms (e.g. 0.250 = 250 g)</p>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">
+                    Add to Cart
+                </button>
+                <button type="button" onclick="document.getElementById('weight-modal-overlay').remove()"
+                    class="px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition">
+                    Cancel
+                </button>
+            </div>
+        </form>
+
+        {# Scale API hook (placeholder) #}
+        <script>
+            // Future: listen for serial/Bluetooth scale readings and auto-fill the weight input.
+            // Scale driver should dispatch: new CustomEvent('scale-reading', { detail: { weight_kg: 0.850 } })
+            document.addEventListener('scale-reading', function (e) {
+                var input = document.getElementById('weight-input');
+                if (input) {
+                    input.value = e.detail.weight_kg.toFixed(3);
+                    input.dispatchEvent(new Event('input'));
+                }
+            });
+            // Escape to close
+            document.addEventListener('keydown', function onEsc(e) {
+                if (e.key === 'Escape') {
+                    var overlay = document.getElementById('weight-modal-overlay');
+                    if (overlay) { overlay.remove(); }
+                    document.removeEventListener('keydown', onEsc);
+                }
+            });
+        </script>
+    </div>
+</div>

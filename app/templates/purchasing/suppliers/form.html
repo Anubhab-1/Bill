@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update supplier details{% else %}Add a new supplier{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+    <a href="{{ url_for('purchasing.suppliers') }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Suppliers
+    </a>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8">
+        <h2 class="text-base font-semibold text-white mb-6">
+            {% if is_edit %}Edit Supplier{% else %}New Supplier{% endif %}
+        </h2>
+
+        <form method="POST" action="{{ form_action }}" novalidate>
+            <div class="mb-5">
+                <label for="name" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Name <span class="text-red-400">*</span>
+                </label>
+                <input id="name" name="name" type="text" value="{{ form_data.get('name', '') }}"
+                    placeholder="e.g. Metro Wholesale Ltd." class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white
+                           placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500
+                           focus:border-transparent transition-colors
+                           {{ 'border-red-500' if errors.get('name') else 'border-gray-700' }}" />
+                {% if errors.get('name') %}<p class="mt-1.5 text-xs text-red-400">{{ errors.name }}</p>{% endif %}
+            </div>
+
+            <div class="mb-5">
+                <label for="contact" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Contact (Phone / Email / Person)
+                </label>
+                <input id="contact" name="contact" type="text" value="{{ form_data.get('contact', '') }}"
+                    placeholder="e.g. +91 98765 43210 / orders@metro.in"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white
+                           placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors" />
+            </div>
+
+            <div class="mb-5">
+                <label for="gst_no" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    GST Number
+                </label>
+                <input id="gst_no" name="gst_no" type="text" value="{{ form_data.get('gst_no', '') }}"
+                    placeholder="e.g. 27AAPFU0939F1ZV" maxlength="20"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono
+                           placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors" />
+            </div>
+
+            <div class="mb-8">
+                <label for="address" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Address
+                </label>
+                <textarea id="address" name="address" rows="3"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white
+                           placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors resize-none">{{ form_data.get('address', '') }}</textarea>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2 border-t border-gray-800">
+                <button type="submit"
+                    class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold
+                           rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                    {% if is_edit %}Save Changes{% else %}Add Supplier{% endif %}
+                </button>
+                <a href="{{ url_for('purchasing.suppliers') }}"
+                    class="px-5 py-2.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

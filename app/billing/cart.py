@@ -51,10 +51,66 @@ def add_to_cart(product) -> None:
             'price':       str(product.price),   # Decimal → str for JSON safety
             'gst_percent': product.gst_percent,
             'quantity':    1,
+            'is_weighed':  False,
+            'weight_kg':   None,
+            'price_per_kg': None,
         }
 
     session[CART_KEY] = cart
     session.modified   = True
+
+
+def add_weighed_to_cart(product, weight_kg: Decimal) -> None:
+    """
+    Add a weighed item to the cart (or replace its weight if already present).
+    For weighed items there is always exactly 1 line in the cart;
+    the 'price' is the computed total for that specific weight.
+    Each new scan opens a fresh weight entry — keyed by product_id + a
+    running suffix so multiple weighings of the same product are supported.
+    """
+    cart = get_cart()
+    # Use a dedicated key for weighed items so multiple weighings are possible
+    # e.g. product id 5 → "5", second weighing → "5w1", third → "5w2"
+    base_key = str(product.id)
+    # Find a free slot
+    slot = base_key
+    if slot in cart and cart[slot].get('is_weighed'):
+        # Already a weighed entry — update it in-place (last scan wins)
+        cart[slot]['weight_kg']  = str(weight_kg)
+        cart[slot]['price']      = str((Decimal(str(product.price_per_kg)) * weight_kg).quantize(Decimal('0.01')))
+    else:
+        line_price = (Decimal(str(product.price_per_kg)) * weight_kg).quantize(Decimal('0.01'))
+        cart[slot] = {
+            'name':         product.name,
+            'barcode':      product.barcode,
+            'price':        str(line_price),      # total price for this weight
+            'gst_percent':  product.gst_percent,
+            'quantity':     1,                    # always 1 "unit" = the weighed portion
+            'is_weighed':   True,
+            'weight_kg':    str(weight_kg),
+            'price_per_kg': str(product.price_per_kg),
+        }
+
+    session[CART_KEY] = cart
+    session.modified   = True
+
+
+def update_cart_quantity(product_id: int, quantity: int) -> None:
+    """
+    Update quantity for a specific product.
+    If quantity <= 0, remove the item.
+    """
+    cart = get_cart()
+    key  = str(product_id)
+
+    if key in cart:
+        if quantity <= 0:
+            cart.pop(key)
+        else:
+            cart[key]['quantity'] = quantity
+        
+        session[CART_KEY] = cart
+        session.modified   = True
 
 
 def remove_from_cart(product_id: int) -> None:

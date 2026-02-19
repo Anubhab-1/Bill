@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block page_title %}Print Queue{% endblock %}
+{% block page_subtitle %}Pending Invoices from Today{% endblock %}
+
+{% block content %}
+
+<div class="max-w-4xl mx-auto mt-6">
+
+    {% if sales %}
+    <div class="grid grid-cols-1 gap-4">
+        {% for sale in sales %}
+        <div
+            class="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-center justify-between shadow-lg hover:border-gray-700 transition-colors">
+
+            <div class="flex items-center gap-4">
+                <div class="h-10 w-10 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-400">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-lg">{{ sale.invoice_number }}</h3>
+                    <p class="text-gray-400 text-sm">
+                        {{ sale.created_at.strftime('%I:%M %p') }} · ₹{{ "{:.2f}".format(sale.grand_total) }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <a href="{{ url_for('billing.invoice', sale_id=sale.id) }}" target="_blank"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print Now
+                </a>
+
+                <button hx-post="{{ url_for('billing.mark_printed', sale_id=sale.id) }}" hx-swap="outerHTML"
+                    target="_this" hx-target="closest div.bg-gray-900"
+                    class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition-colors border border-gray-700">
+                    Mark Done
+                </button>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+
+    <div class="text-center py-20">
+        <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">All Caught Up!</h3>
+        <p class="text-gray-500">No pending invoices to print for today.</p>
+        <a href="{{ url_for('billing.index') }}"
+            class="inline-block mt-6 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
+            Back to Billing
+        </a>
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

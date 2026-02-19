@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block page_title %}Promotions{% endblock %}
+{% block page_subtitle %}Manage discount rules and pricing promotions{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <a href="{{ url_for('promotions.tester') }}"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 text-sm transition-colors mr-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Test Promos
+        </a>
+        <a href="{{ url_for('promotions.new_promo') }}"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white hover:bg-brand-700 text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            New Promotion
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+<div
+    class="mb-4 px-4 py-3 rounded-lg text-sm {{ 'bg-green-900/50 border border-green-700 text-green-300' if category=='success' else 'bg-red-900/50 border border-red-700 text-red-300' }}">
+    {{ message }}
+</div>
+{% endfor %}
+{% endwith %}
+
+{% if promos %}
+<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Type</th>
+                <th class="text-left px-5 py-3">Valid</th>
+                <th class="text-right px-5 py-3">Uses</th>
+                <th class="text-center px-5 py-3">Stack</th>
+                <th class="text-center px-5 py-3">Status</th>
+                <th class="text-right px-5 py-3">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+            {% for p in promos %}
+            <tr class="hover:bg-gray-800/40 transition-colors">
+                <td class="px-5 py-3 font-medium text-white">{{ p.name }}</td>
+                <td class="px-5 py-3">
+                    {% set type_colors = {
+                    'percentage_item': 'bg-indigo-500/20 text-indigo-300',
+                    'fixed_item': 'bg-cyan-500/20 text-cyan-300',
+                    'bill_percentage': 'bg-purple-500/20 text-purple-300',
+                    'buy_x_get_y': 'bg-amber-500/20 text-amber-300',
+                    } %}
+                    <span
+                        class="px-2 py-0.5 rounded-full text-xs font-medium {{ type_colors.get(p.promo_type, 'bg-gray-700 text-gray-300') }}">
+                        {{ promo_types.get(p.promo_type, p.promo_type) }}
+                    </span>
+                </td>
+                <td class="px-5 py-3 text-gray-400 text-xs">
+                    {% if p.start_date %}{{ p.start_date.strftime('%d %b %Y') }}{% else %}Always{% endif %}
+                    →
+                    {% if p.end_date %}{{ p.end_date.strftime('%d %b %Y') }}{% else %}No expiry{% endif %}
+                </td>
+                <td class="px-5 py-3 text-right tabular-nums text-gray-400">
+                    {{ p.current_uses }}{% if p.max_uses %} / {{ p.max_uses }}{% endif %}
+                </td>
+                <td class="px-5 py-3 text-center">
+                    {% if p.stackable %}
+                    <span class="text-green-400 text-xs">✓</span>
+                    {% else %}
+                    <span class="text-red-400 text-xs">✗</span>
+                    {% endif %}
+                </td>
+                <td class="px-5 py-3 text-center">
+                    <form action="{{ url_for('promotions.toggle_promo', promo_id=p.id) }}" method="POST">
+                        <button type="submit"
+                            class="px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors
+                     {{ 'bg-green-500/20 text-green-300 hover:bg-green-500/30' if p.is_active else 'bg-gray-700 text-gray-400 hover:bg-gray-600' }}">
+                            {{ 'Active' if p.is_active else 'Inactive' }}
+                        </button>
+                    </form>
+                </td>
+                <td class="px-5 py-3 text-right">
+                    <a href="{{ url_for('promotions.edit_promo', promo_id=p.id) }}"
+                        class="text-xs text-brand-400 hover:text-brand-300 mr-3">Edit</a>
+                    <form action="{{ url_for('promotions.delete_promo', promo_id=p.id) }}" method="POST" class="inline"
+                        onsubmit="return confirm('Delete this promotion?')">
+                        <button type="submit" class="text-xs text-red-400 hover:text-red-300">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+    <p class="text-gray-500 text-sm mb-3">No promotions yet.</p>
+    <a href="{{ url_for('promotions.new_promo') }}" class="text-brand-400 hover:text-brand-300 text-sm">
+        Create your first promotion →
+    </a>
+</div>
+{% endif %}
+{% endblock %}

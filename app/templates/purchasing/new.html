@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block page_title %}New Purchase Order{% endblock %}
+{% block page_subtitle %}Create a PO against a supplier with product line items{% endblock %}
+
+{% block extra_head %}
+<style>
+    #items-table tr:last-child td {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <a href="{{ url_for('purchasing.index') }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Purchase Orders
+    </a>
+
+    <form method="POST" action="{{ url_for('purchasing.new_po') }}" id="po-form" novalidate>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {# ── Left column: PO header ── #}
+            <div class="lg:col-span-1 space-y-5">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h2 class="text-sm font-semibold text-white mb-5">Order Details</h2>
+
+                    {# Supplier #}
+                    <div class="mb-4">
+                        <label for="supplier_id"
+                            class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                            Supplier <span class="text-red-400">*</span>
+                        </label>
+                        <select id="supplier_id" name="supplier_id" class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white
+                                   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors
+                                   {{ 'border-red-500' if errors.get('supplier_id') else 'border-gray-700' }}">
+                            <option value="">— Choose supplier —</option>
+                            {% for s in suppliers %}
+                            <option value="{{ s.id }}" {{ 'selected' if form_data.get('supplier_id',
+                                [''])[0]==s.id|string else '' }}>
+                                {{ s.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if errors.get('supplier_id') %}
+                        <p class="mt-1 text-xs text-red-400">{{ errors.supplier_id }}</p>
+                        {% endif %}
+                        <a href="{{ url_for('purchasing.new_supplier') }}" target="_blank"
+                            class="mt-1 inline-block text-xs text-brand-400 hover:underline">+ New supplier</a>
+                    </div>
+
+                    {# Expected date #}
+                    <div class="mb-4">
+                        <label for="expected_date"
+                            class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                            Expected Delivery
+                        </label>
+                        <input id="expected_date" name="expected_date" type="date"
+                            value="{{ form_data.get('expected_date', [''])[0] }}"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white
+                                   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors" />
+                        {% if errors.get('expected_date') %}
+                        <p class="mt-1 text-xs text-red-400">{{ errors.expected_date }}</p>
+                        {% endif %}
+                    </div>
+
+                    {# Notes #}
+                    <div>
+                        <label for="notes"
+                            class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                            Notes
+                        </label>
+                        <textarea id="notes" name="notes" rows="3"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white
+                                   placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors resize-none"
+                            placeholder="Optional order notes...">{{ form_data.get('notes', [''])[0] }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Right column: Line items ── #}
+            <div class="lg:col-span-2">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-sm font-semibold text-white">Products</h2>
+                        <button type="button" id="add-row-btn"
+                            class="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Row
+                        </button>
+                    </div>
+
+                    {% if errors.get('items') %}
+                    <p class="mb-3 text-xs text-red-400">{{ errors.items }}</p>
+                    {% endif %}
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm" id="items-table">
+                            <thead>
+                                <tr class="border-b border-gray-800">
+                                    <th class="pb-2 text-left text-xs font-medium text-gray-500">Product</th>
+                                    <th class="pb-2 text-center text-xs font-medium text-gray-500 w-24">Qty</th>
+                                    <th class="pb-2 text-right text-xs font-medium text-gray-500 w-28">Unit Cost (₹)
+                                    </th>
+                                    <th class="pb-2 w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-body">
+                                <tr class="item-row border-b border-gray-800/50">
+                                    <td class="py-2 pr-2">
+                                        <select name="product_id[]"
+                                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white
+                                                   focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent">
+                                            <option value="">— Product —</option>
+                                            {% for p in products %}
+                                            <option value="{{ p.id }}">{{ p.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td class="py-2 px-1">
+                                        <input type="number" name="ordered_qty[]" min="1" placeholder="0"
+                                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white text-center
+                                                   focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent" />
+                                    </td>
+                                    <td class="py-2 pl-1">
+                                        <input type="number" name="unit_cost[]" min="0" step="0.01" placeholder="0.00"
+                                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white text-right
+                                                   focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent" />
+                                    </td>
+                                    <td class="py-2 pl-2 text-center">
+                                        <button type="button"
+                                            class="remove-row text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">&times;</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex items-center justify-end gap-3">
+                    <a href="{{ url_for('purchasing.index') }}"
+                        class="px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold
+                               rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        Create Purchase Order
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        const body = document.getElementById('items-body');
+        const addBtn = document.getElementById('add-row-btn');
+        const tmpl = body.querySelector('tr.item-row');
+
+        // Products list for the clone
+        const productsHTML = tmpl.querySelector('select[name="product_id[]"]').innerHTML;
+
+        addBtn.addEventListener('click', function () {
+            const newRow = tmpl.cloneNode(true);
+            // Clear values
+            newRow.querySelectorAll('input').forEach(i => i.value = '');
+            newRow.querySelector('select').innerHTML = productsHTML;
+            newRow.querySelector('select').value = '';
+            body.appendChild(newRow);
+        });
+
+        body.addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-row')) {
+                const rows = body.querySelectorAll('tr.item-row');
+                if (rows.length > 1) {
+                    e.target.closest('tr').remove();
+                }
+            }
+        });
+    })();
+</script>
+{% endblock %}

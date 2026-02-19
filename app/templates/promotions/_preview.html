@@ -1,0 +1,52 @@
+{# app/templates/promotions/_preview.html — HTMX partial #}
+{% if promo_result.applied %}
+<div class="space-y-4">
+    <p class="text-sm font-semibold text-white">Applied Promotions</p>
+
+    {{-- Cart breakdown --}}
+    <div class="space-y-1">
+        {% for pid, item in mock_cart.items() %}
+        <div class="flex justify-between text-xs text-gray-400">
+            <span>{{ item.name }} × {{ item.quantity }}</span>
+            <span>₹{{ "%.2f"|format(item.price|float * item.quantity|int) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="border-t border-gray-700 pt-3 space-y-2">
+        {% for entry in promo_result.applied %}
+        <div class="flex justify-between text-sm">
+            <span class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                <span class="text-green-300 font-medium">{{ entry.promo_name }}</span>
+                <span class="text-gray-500 text-xs">— {{ entry.description }}</span>
+            </span>
+            <span class="text-green-400 font-semibold tabular-nums">−₹{{ "%.2f"|format(entry.discount_amount|float)
+                }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="border-t border-gray-700 pt-3 space-y-1">
+        <div class="flex justify-between text-sm text-gray-400">
+            <span>Subtotal (before discount)</span>
+            <span class="tabular-nums">₹{{ "%.2f"|format(promo_result.original_total|float) }}</span>
+        </div>
+        <div class="flex justify-between text-sm text-green-400 font-semibold">
+            <span>Total Discount</span>
+            <span class="tabular-nums">−₹{{ "%.2f"|format(promo_result.total_discount|float) }}</span>
+        </div>
+        <div class="flex justify-between text-base text-white font-bold">
+            <span>Subtotal After Discount</span>
+            <span class="tabular-nums">₹{{ "%.2f"|format(promo_result.discounted_total|float) }}</span>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-4">
+    <p class="text-gray-500 text-sm">No active promotions matched this cart.</p>
+    <p class="text-gray-600 text-xs mt-1">
+        Make sure promotions are active and the cart contains matching products.
+    </p>
+</div>
+{% endif %}

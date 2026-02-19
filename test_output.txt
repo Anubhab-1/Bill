@@ -1,53 +1,10 @@
-﻿
-[1mΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-  Mall Billing System ΓÇö Critical Scenario Tests
-ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[0m
-  [96mINFO[0m ΓÇö Using SQLite in-memory DB (no PostgreSQL required)
-  [96mINFO[0m ΓÇö Scenario 3 uses code analysis + sequential simulation
+﻿============================= test session starts =============================
+platform win32 -- Python 3.8.10, pytest-7.4.0, pluggy-1.5.0
+rootdir: C:\Users\anubhab samanta\OneDrive\Desktop\Mall
+plugins: anyio-4.5.2, asyncio-0.23.8, cov-5.0.0
+asyncio: mode=strict
+collected 11 items
 
-[1m[96mΓû╢ Scenario 1 ΓÇö Add same product multiple times quickly[0m
-  [92mPASS[0m ΓÇö quantity correctly accumulated to 4 (single cart entry, not 4 rows)
-  [92mPASS[0m ΓÇö cart has exactly 1 entry (no duplicate product rows)
-  [92mPASS[0m ΓÇö subtotal correct: Γé╣200.00 (4 ├ù Γé╣50.00)
+test_weighed_items.py ...........                                        [100%]
 
-[1m[96mΓû╢ Scenario 2 ΓÇö Insufficient stock rejection[0m
-  [92mPASS[0m ΓÇö stock unchanged: 2 ΓåÆ 2 (rollback worked)
-  [92mPASS[0m ΓÇö no Sale row created (transaction rolled back)
-  [92mPASS[0m ΓÇö error message present in response
-
-[1m[96mΓû╢ Scenario 3 ΓÇö Two concurrent requests for last unit of stock[0m
-  [96mINFO[0m ΓÇö SQLite does not support SELECT FOR UPDATE.
-  [96mINFO[0m ΓÇö Running sequential logic test + code path verification instead.
-  [92mPASS[0m ΓÇö complete() uses .with_for_update() (SELECT FOR UPDATE confirmed in code)
-  [92mPASS[0m ΓÇö product_ids sorted before locking (deadlock prevention confirmed)
-  [96mINFO[0m ΓÇö Request-1: Sale created (2026-0001)
-  [96mINFO[0m ΓÇö Request-2: Insufficient stock (0 < 1)
-  [92mPASS[0m ΓÇö exactly 1 sale succeeded, 1 rejected (correct sequential behaviour)
-  [92mPASS[0m ΓÇö stock never went negative (final=0)
-  [96mINFO[0m ΓÇö On PostgreSQL: FOR UPDATE serialises concurrent Tx at DB level.
-  [96mINFO[0m ΓÇö Tx B blocks on the lock until Tx A commits, then sees stock=0 ΓåÆ rejects.
-
-[1m[96mΓû╢ Scenario 4 ΓÇö Remove item then complete sale[0m
-  [92mPASS[0m ΓÇö both products in cart after adding
-  [92mPASS[0m ΓÇö Product B removed; only Product A remains in cart
-  [92mPASS[0m ΓÇö invoice contains only Product A (removed B not billed)
-  [92mPASS[0m ΓÇö Product A stock deducted correctly (10 ΓåÆ 9)
-  [92mPASS[0m ΓÇö Product B stock untouched (still 10, was never billed)
-
-[1m[96mΓû╢ Scenario 5 ΓÇö Complete sale with empty cart[0m
-  [92mPASS[0m ΓÇö no Sale created for empty cart
-  [92mPASS[0m ΓÇö "Cart is empty" error message shown to user
-  [92mPASS[0m ΓÇö empty cart guard confirmed in complete() source code
-
-[1mΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-  SUMMARY
-ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[0m
-  [92mPASS[0m  Scenario 1 ΓÇö Duplicate add accumulates quantity
-  [92mPASS[0m  Scenario 2 ΓÇö Insufficient stock rejected
-  [92mPASS[0m  Scenario 3 ΓÇö Concurrent last-unit (code + logic)
-  [92mPASS[0m  Scenario 4 ΓÇö Remove item then complete
-  [92mPASS[0m  Scenario 5 ΓÇö Empty cart rejected
-
-[92m[1m  5/5 scenarios passed[0m
-ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-
+============================= 11 passed in 1.81s ==============================

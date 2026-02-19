@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block page_title %}Receive GRN — PO #{{ po.id }}{% endblock %}
+{% block page_subtitle %}Record goods received from {{ po.supplier.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+    <a href="{{ url_for('purchasing.po_detail', po_id=po.id) }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to PO #{{ po.id }}
+    </a>
+
+    <form method="POST" action="{{ url_for('purchasing.receive_po', po_id=po.id) }}" novalidate>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+            <div class="px-5 py-3.5 border-b border-gray-800">
+                <h2 class="text-sm font-semibold text-white">Items to Receive</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Enter 0 for items not received in this delivery.</p>
+            </div>
+
+            {% if errors.get('items') %}
+            <div class="px-5 py-3 bg-red-900/20 border-b border-red-800 text-sm text-red-400">
+                {{ errors.items }}
+            </div>
+            {% endif %}
+
+            <div class="divide-y divide-gray-800">
+                {% for item in po.items %}
+                <div class="px-5 py-4">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <div>
+                            <p class="text-sm font-medium text-white">{{ item.product.name }}</p>
+                            <p class="text-xs text-gray-500">
+                                Ordered: {{ item.ordered_qty }} · Already received: {{ item.total_received }}
+                                · <span
+                                    class="{{ 'text-amber-400' if item.remaining_qty > 0 else 'text-emerald-400' }}">
+                                    Pending: {{ item.remaining_qty }}
+                                </span>
+                            </p>
+                        </div>
+                        {% if item.unit_cost %}
+                        <span class="text-xs text-gray-500 whitespace-nowrap">₹{{ "{:.2f}".format(item.unit_cost |
+                            float) }} each</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Qty Received</label>
+                            <input type="number" name="qty_{{ item.id }}" min="0" value="{{ item.remaining_qty }}"
+                                class="w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white text-center
+                                       focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-colors
+                                       {{ 'border-red-500' if errors.get('qty_' ~ item.id) else 'border-gray-700' }}" />
+                            {% if errors.get('qty_' ~ item.id) %}
+                            <p class="mt-1 text-xs text-red-400">{{ errors['qty_' ~ item.id] }}</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Batch #</label>
+                            <input type="text" name="batch_{{ item.id }}" placeholder="Optional"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                                       focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Expiry Date</label>
+                            <input type="date" name="expiry_{{ item.id }}"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                                       focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-colors" />
+                            {% if errors.get('expiry_' ~ item.id) %}
+                            <p class="mt-1 text-xs text-red-400">{{ errors['expiry_' ~ item.id] }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Notes + submit #}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+            <label for="notes" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                Delivery Notes
+            </label>
+            <textarea id="notes" name="notes" rows="2"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white
+                       placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
+                placeholder="Optional notes about this delivery..."></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{{ url_for('purchasing.po_detail', po_id=po.id) }}"
+                class="px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                Cancel
+            </a>
+            <button type="submit" class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold
+                       rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                Confirm GRN &amp; Update Stock
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

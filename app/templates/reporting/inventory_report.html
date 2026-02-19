@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page_title %}Inventory Report{% endblock %}
+{% block page_subtitle %}Stock valuation and reorder analysis{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div class="bg-gray-900 border border-gray-800 px-6 py-3 rounded-xl flex items-center gap-4">
+        <span class="text-sm text-gray-400 uppercase">Total Inventory Value (Retail)</span>
+        <span class="text-xl font-bold text-purple-400">₹{{ "{:,.2f}".format(total_valuation) }}</span>
+    </div>
+
+    <a href="{{ url_for('reporting.export_csv', report_type='inventory') }}"
+        class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors border border-gray-700">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Export CSV
+    </a>
+</div>
+
+<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+            <tr>
+                <th class="px-6 py-3">Product Name</th>
+                <th class="px-6 py-3">Barcode</th>
+                <th class="px-6 py-3 text-center">Stock</th>
+                <th class="px-6 py-3 text-right">Price</th>
+                <th class="px-6 py-3 text-right">Value</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+            {% for item in inventory %}
+            <tr class="hover:bg-gray-800/50 transition-colors">
+                <td class="px-6 py-3 text-white font-medium">{{ item.name }}</td>
+                <td class="px-6 py-3 text-gray-500 font-mono text-xs">{{ item.barcode }}</td>
+                <td class="px-6 py-3 text-center">
+                    {% if item.stock <= 5 %} <span
+                        class="px-2 py-0.5 rounded text-xs font-bold bg-red-500/20 text-red-300">
+                        {{ item.stock }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-300">{{ item.stock }}</span>
+                        {% endif %}
+                </td>
+                <td class="px-6 py-3 text-right text-gray-400">₹{{ "{:.2f}".format(item.price) }}</td>
+                <td class="px-6 py-3 text-right text-white font-semibold">₹{{ "{:.2f}".format(item.value) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

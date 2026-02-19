@@ -41,6 +41,12 @@
              font-semibold rounded-lg transition-colors">
             🖨 Print Invoice
         </button>
+        {% if not sale.is_printed and not reprint_mode %}
+        <button hx-post="{{ url_for('billing.mark_printed', sale_id=sale.id) }}" hx-swap="outerHTML"
+            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            ✓ Mark Printed
+        </button>
+        {% endif %}
     </div>
 
     <!-- ── Invoice Paper ────────────────────────────────────────── -->
@@ -56,6 +62,12 @@
             <div class="text-right">
                 <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Invoice</p>
                 <p class="text-2xl font-bold text-indigo-600 mt-1">{{ sale.invoice_number }}</p>
+                {% if reprint_mode %}
+                <p
+                    class="text-xs font-bold text-red-500 uppercase border border-red-500 rounded px-1 mt-1 inline-block">
+                    Reprint
+                </p>
+                {% endif %}
             </div>
         </div>
 
@@ -91,11 +103,28 @@
                 {% for item in sale.items %}
                 <tr class="border-b border-gray-100 last:border-0">
                     <td class="py-3 text-gray-800 font-medium">
-                        {{ item.product.name }}
+                        {% if item.weight_kg %}⚖ {% endif %}{{ item.product.name }}
                         <span class="block text-xs text-gray-400 font-mono">{{ item.product.barcode }}</span>
+                        {% if item.weight_kg %}
+                        <span class="block text-xs text-indigo-600 font-semibold mt-0.5">
+                            {{ "{:.3f}".format(item.weight_kg | float) }} kg
+                        </span>
+                        {% endif %}
                     </td>
-                    <td class="py-3 text-center text-gray-700">{{ item.quantity }}</td>
-                    <td class="py-3 text-right text-gray-700">₹{{ "{:.2f}".format(item.price_at_sale | float) }}</td>
+                    <td class="py-3 text-center text-gray-700">
+                        {% if item.weight_kg %}
+                        <span class="text-xs text-gray-400">—</span>
+                        {% else %}
+                        {{ item.quantity }}
+                        {% endif %}
+                    </td>
+                    <td class="py-3 text-right text-gray-700">
+                        {% if item.weight_kg %}
+                        ₹{{ "{:.2f}".format(item.price_at_sale | float) }}<span class="text-xs text-gray-400">/kg</span>
+                        {% else %}
+                        ₹{{ "{:.2f}".format(item.price_at_sale | float) }}
+                        {% endif %}
+                    </td>
                     <td class="py-3 text-right text-gray-500 text-xs">
                         {{ item.gst_percent }}%<br>
                         <span class="text-gray-400">₹{{ "{:.2f}".format(item.gst_amount | float) }}</span>
@@ -132,6 +161,19 @@
                     <span>Grand Total</span>
                     <span class="text-indigo-600">₹{{ "{:.2f}".format(sale.grand_total | float) }}</span>
                 </div>
+
+                {% if sale.payments %}
+                <div class="mt-4 pt-3 border-t border-gray-200">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Payment Mode</p>
+                    {% for p in sale.payments %}
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span class="capitalize">{{ p.payment_method }}</span>
+                        <span>₹{{ "{:.2f}".format(p.amount | float) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
             </div>
         </div>
 

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block page_title %}Process Return{% endblock %}
+{% block page_subtitle %}Invoice: {{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+
+<div class="max-w-6xl mx-auto mt-6">
+
+    <!-- ── Sale Summary ────────────────────────────────────────────── -->
+    <div
+        class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Original Sale</p>
+            <p class="text-white text-lg font-medium mt-1">
+                {{ sale.created_at.strftime('%d %b %Y, %I:%M %p') }}
+            </p>
+            <p class="text-sm text-gray-400 mt-0.5">Cashier: {{ sale.cashier.name }}</p>
+        </div>
+        <div class="text-right">
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Total Amount</p>
+            <p class="text-2xl font-bold text-white">₹{{ "{:.2f}".format(sale.grand_total) }}</p>
+        </div>
+    </div>
+
+    <!-- ── Return Form ─────────────────────────────────────────────── -->
+    <form method="POST" action="{{ url_for('billing.returns_process', sale_id=sale.id) }}"
+        onsubmit="return confirm('Are you sure you want to process this return? Inventory will be updated.')">
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl mb-6">
+            <div class="p-6 border-b border-gray-800">
+                <h3 class="text-lg font-semibold text-white">Select Items to Return</h3>
+                <p class="text-sm text-gray-400">Enter quantity to return for each eligible item.</p>
+            </div>
+
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-800/50 text-gray-400 uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-3 font-medium">Product</th>
+                        <th class="px-6 py-3 font-medium text-right">Unit Price (inc. Tax)</th>
+                        <th class="px-6 py-3 font-medium text-center">Sold Qty</th>
+                        <th class="px-6 py-3 font-medium text-center text-yellow-500">Already Returned</th>
+                        <th class="px-6 py-3 font-medium text-center text-emerald-400">Return Now</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for item in sale.items %}
+                    {% set already_returned = returned_map.get(item.id, 0) %}
+                    {% set remaining = item.quantity - already_returned %}
+
+                    <tr class="hover:bg-gray-800/30 transition-colors">
+                        <td class="px-6 py-4 font-medium text-white">
+                            {{ item.product.name }}
+                            <div class="text-xs text-gray-500 font-mono mt-0.5">{{ item.product.barcode }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-right text-gray-300">
+                            <!-- Unit Price with Tax = Subtotal / Qty -->
+                            ₹{{ "{:.2f}".format(item.subtotal_with_gst / item.quantity) }}
+                        </td>
+                        <td class="px-6 py-4 text-center text-gray-300">
+                            {{ item.quantity }}
+                        </td>
+                        <td class="px-6 py-4 text-center text-yellow-500 font-medium">
+                            {% if already_returned > 0 %}{{ already_returned }}{% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if remaining > 0 %}
+                            <input type="number" name="qty_{{ item.id }}" min="0" max="{{ remaining }}" placeholder="0"
+                                class="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
+                                oninput="calculateTotal()">
+                            <p class="text-xs text-gray-500 mt-1">Max: {{ remaining }}</p>
+                            {% else %}
+                            <span
+                                class="text-xs bg-gray-800 text-gray-500 px-2 py-1 rounded border border-gray-700">Fully
+                                Returned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── Refund Details ──────────────────────────────────────── -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+            <!-- Refund Method -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <label class="block text-sm font-semibold text-gray-400 mb-2">Refund Method</label>
+                <select name="refund_method" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="cash">Cash</option>
+                    <option value="card">Card / UPI</option>
+                    <option value="store_credit">Store Credit</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-2">
+                    <span class="text-yellow-500">Note:</span> Card/UPI refunds must be processed on the external
+                    terminal manually.
+                </p>
+            </div>
+
+            <!-- Notes -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <label class="block text-sm font-semibold text-gray-400 mb-2">Reason / Note</label>
+                <textarea name="note" rows="3" placeholder="e.g. Defective product, Customer changed mind"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            </div>
+
+            <!-- Total & Action -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Estimated Refund</p>
+                    <p class="text-3xl font-bold text-emerald-400 mt-1" id="total_refund_display">₹0.00</p>
+                </div>
+                <button type="submit"
+                    class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all transform active:scale-95">
+                    Confirm Return
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    function calculateTotal() {
+        let total = 0;
+        const rows = document.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const priceCell = row.querySelector('td:nth-child(2)');
+            const input = row.querySelector('input[type="number"]');
+
+            if (priceCell && input) {
+                const price = parseFloat(priceCell.textContent.replace(/[^\d.]/g, ''));
+                const qty = parseInt(input.value) || 0;
+                total += price * qty;
+            }
+        });
+
+        document.getElementById('total_refund_display').textContent = '₹' + total.toFixed(2);
+    }
+</script>
+
+{% endblock %}

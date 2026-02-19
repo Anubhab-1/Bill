@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Receive Stock — {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-xl mx-auto">
+
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Receive Stock</h1>
+            <p class="text-slate-400 text-sm mt-1">{{ product.name }} — Current stock: {{ product.stock }}</p>
+        </div>
+        <a href="{{ url_for('inventory.batches', product_id=product.id) }}"
+            class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition">← Batches</a>
+    </div>
+
+    <form method="POST" class="bg-slate-800 rounded-xl p-6 space-y-5 shadow-lg">
+
+        {# Batch Number #}
+        <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Batch Number <span
+                    class="text-red-400">*</span></label>
+            <input type="text" name="batch_number" value="{{ form_data.get('batch_number','') }}"
+                placeholder="e.g. B2024-001" class="w-full bg-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 border
+                    {% if errors.batch_number %}border-red-500{% else %}border-slate-600{% endif %}
+                    focus:outline-none focus:border-indigo-500">
+            {% if errors.batch_number %}<p class="text-red-400 text-xs mt-1">{{ errors.batch_number }}</p>{% endif %}
+        </div>
+
+        {# Expiry Date #}
+        <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Expiry Date <span
+                    class="text-slate-500">(optional for non-perishable)</span></label>
+            <input type="date" name="expiry_date" value="{{ form_data.get('expiry_date','') }}" class="w-full bg-slate-700 rounded-lg px-4 py-2.5 text-white border
+                    {% if errors.expiry_date %}border-red-500{% else %}border-slate-600{% endif %}
+                    focus:outline-none focus:border-indigo-500">
+            {% if errors.expiry_date %}<p class="text-red-400 text-xs mt-1">{{ errors.expiry_date }}</p>{% endif %}
+        </div>
+
+        {# Quantity #}
+        <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Quantity Received <span
+                    class="text-red-400">*</span></label>
+            <input type="number" name="quantity" min="1" value="{{ form_data.get('quantity','') }}" placeholder="0"
+                class="w-full bg-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 border
+                    {% if errors.quantity %}border-red-500{% else %}border-slate-600{% endif %}
+                    focus:outline-none focus:border-indigo-500">
+            {% if errors.quantity %}<p class="text-red-400 text-xs mt-1">{{ errors.quantity }}</p>{% endif %}
+        </div>
+
+        {# Cost Price #}
+        <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Cost Price (₹) <span
+                    class="text-slate-500">(optional)</span></label>
+            <input type="number" name="cost_price" step="0.01" min="0" value="{{ form_data.get('cost_price','') }}"
+                placeholder="0.00" class="w-full bg-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 border
+                    {% if errors.cost_price %}border-red-500{% else %}border-slate-600{% endif %}
+                    focus:outline-none focus:border-indigo-500">
+            {% if errors.cost_price %}<p class="text-red-400 text-xs mt-1">{{ errors.cost_price }}</p>{% endif %}
+        </div>
+
+        <button type="submit"
+            class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition shadow-md">
+            ✅ Receive Stock
+        </button>
+    </form>
+
+</div>
+{% endblock %}

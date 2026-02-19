@@ -45,15 +45,21 @@ class Sale(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     invoice_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     cashier_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    customer_id    = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     total_amount   = db.Column(db.Numeric(12, 2), nullable=False)  # sum of subtotals (excl. GST)
     gst_total      = db.Column(db.Numeric(12, 2), nullable=False)  # sum of GST amounts
+    grand_total    = db.Column(db.Numeric(10, 2))  # cached total + gst
     payment_method = db.Column(db.String(20), nullable=False, default='cash')
+    # Printing / Reconciliation
+    print_html     = db.Column(db.Text)            # stored invoice snapshot
+    is_printed     = db.Column(db.Boolean, default=False)
     created_at     = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # ── Relationships ─────────────────────────────────────────────
-    cashier = db.relationship('User',     backref='sales', lazy='select')
-    items   = db.relationship('SaleItem', backref='sale',  lazy='select',
-                              cascade='all, delete-orphan')
+    cashier  = db.relationship('User',     backref='sales', lazy='select')
+    customer = db.relationship('Customer', backref='sales', lazy='select')
+    items    = db.relationship('SaleItem', backref='sale',  lazy='select',
+                               cascade='all, delete-orphan')
 
     # ── Computed helpers ──────────────────────────────────────────
     @property
@@ -80,6 +86,9 @@ class SaleItem(db.Model):
     price_at_sale = db.Column(db.Numeric(10, 2), nullable=False)  # base price snapshot
     gst_percent   = db.Column(db.Integer, nullable=False)
     subtotal      = db.Column(db.Numeric(12, 2), nullable=False)  # qty × price_at_sale
+    # Weighed items
+    weight_kg     = db.Column(db.Numeric(8, 3), nullable=True)    # e.g. 0.850 kg
+    unit_label    = db.Column(db.String(10), nullable=True)       # 'kg' or None
 
     # ── Relationship ──────────────────────────────────────────────
     product = db.relationship('Product', lazy='select')
@@ -98,6 +107,67 @@ class SaleItem(db.Model):
 
     def __repr__(self):
         return f"<SaleItem sale={self.sale_id} product={self.product_id} qty={self.quantity}>"
+
+
+class Return(db.Model):
+    """
+    Represents a processed return/refund transaction.
+    """
+    __tablename__ = 'returns'
+
+    id             = db.Column(db.Integer, primary_key=True)
+    sale_id        = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
+    processed_by   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    refund_method  = db.Column(db.String(20), nullable=False)  # cash/card
+    total_refunded = db.Column(db.Numeric(12, 2), nullable=False)
+    note           = db.Column(db.Text)
+    created_at     = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # ── Relationships ─────────────────────────────────────────────
+    sale    = db.relationship('Sale',    backref='returns', lazy='select')
+    cashier = db.relationship('User',    lazy='select')
+    items   = db.relationship('ReturnItem', backref='return_obj', lazy='select',
+                              cascade='all, delete-orphan')
+
+
+class ReturnItem(db.Model):
+    """
+    Line item for a return.
+    Links back to the original SaleItem to validate quantity limits.
+    """
+    __tablename__ = 'return_items'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    return_id     = db.Column(db.Integer, db.ForeignKey('returns.id'), nullable=False)
+    sale_item_id  = db.Column(db.Integer, db.ForeignKey('sale_items.id'), nullable=False)
+    product_id    = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity      = db.Column(db.Integer, nullable=False)
+    refund_amount = db.Column(db.Numeric(12, 2), nullable=False)
+    reason        = db.Column(db.String(100))
+
+    # ── Relationships ─────────────────────────────────────────────
+    product   = db.relationship('Product', lazy='select')
+    sale_item = db.relationship('SaleItem', backref='return_items', lazy='select')
+
+
+
+    sale_item = db.relationship('SaleItem', backref='return_items', lazy='select')
+
+
+class SalePayment(db.Model):
+    """
+    Tracks individual payments for a sale (allowing split tender).
+    """
+    __tablename__ = 'sale_payments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
+    payment_method = db.Column(db.String(20), nullable=False) # cash/card/upi
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    reference = db.Column(db.String(100)) # txn id, optional
+
+    # ── Relationships ─────────────────────────────────────────────
+    sale = db.relationship('Sale', backref='payments', lazy='select')
 
 
 class CashSession(db.Model):

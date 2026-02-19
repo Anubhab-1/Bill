@@ -117,6 +117,11 @@
                 {% if current_user and current_user.is_admin %}
                 <td class="px-5 py-4 text-right">
                     <div class="inline-flex items-center gap-2">
+                        <!-- Batches -->
+                        <a href="{{ url_for('inventory.batches', product_id=product.id) }}" class="px-3 py-1.5 text-xs font-medium text-emerald-300 bg-emerald-900/30
+                      hover:bg-emerald-900/50 rounded-lg transition-colors border border-emerald-800">
+                            Batches
+                        </a>
                         <!-- Logs -->
                         <a href="{{ url_for('inventory.logs', product_id=product.id) }}" class="px-3 py-1.5 text-xs font-medium text-blue-300 bg-blue-900/30
                       hover:bg-blue-900/50 rounded-lg transition-colors border border-blue-800">

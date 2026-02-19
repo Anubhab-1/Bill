@@ -55,8 +55,17 @@ class ProductionConfig(Config):
     LOCAL_PRODUCTION = not CLOUD_DEMO
 
 
+class TestingConfig(Config):
+    """Testing environment configuration."""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+    SESSION_COOKIE_SECURE = False
+    SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't use the prod pool settings
+
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'testing': TestingConfig,
     'default': DevelopmentConfig
 }

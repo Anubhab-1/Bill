@@ -1,5 +1,6 @@
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
+from typing import Optional
 from app import db
 
 # ── Central threshold — change here, applies everywhere ──────────
@@ -17,6 +18,9 @@ class Product(db.Model):
     stock       = db.Column(db.Integer, nullable=False, default=0)
     gst_percent = db.Column(db.Integer, nullable=False, default=0)
     is_active   = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    # Weighed-item support
+    is_weighed    = db.Column(db.Boolean, nullable=False, default=False)
+    price_per_kg  = db.Column(db.Numeric(10, 2), nullable=True)   # set when is_weighed=True
     created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at  = db.Column(
         db.DateTime,
@@ -49,6 +53,11 @@ class Product(db.Model):
     def __repr__(self):
         return f"<Product {self.barcode!r} {self.name!r}>"
 
+    # ── Batch relationship (defined here to avoid SQLAlchemy MetaData conflicts) ──
+    # Populated once ProductBatch is declared below; lazy='dynamic' lets us
+    # apply .order_by() at query-time for FIFO ordering.
+    # (Relationship added after class via back_populates pattern below)
+
 
 class InventoryLog(db.Model):
     """
@@ -71,3 +80,39 @@ class InventoryLog(db.Model):
 
     def __repr__(self):
         return f"<Log Product:{self.product_id} {self.old_stock}->{self.new_stock} ({self.reason})>"
+
+
+class ProductBatch(db.Model):
+    """
+    Tracks individual stock batches for a product.
+    Supports expiry dates and FIFO deduction during billing.
+    """
+    __tablename__ = 'product_batches'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    product_id   = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), nullable=False, index=True)
+    batch_number = db.Column(db.String(60), nullable=False, default='LEGACY')
+    expiry_date  = db.Column(db.Date, nullable=True)         # NULL = no expiry (non-perishable)
+    quantity     = db.Column(db.Integer, nullable=False, default=0)
+    cost_price   = db.Column(db.Numeric(10, 2), nullable=True)
+    created_at   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # The 'product' relationship is now defined via backref from Product.batches
+
+    __table_args__ = (
+        db.CheckConstraint('quantity >= 0', name='check_batch_qty_non_negative'),
+    )
+
+    # ── Computed helpers ──────────────────────────────────────────
+    @property
+    def is_expired(self) -> bool:
+        return self.expiry_date is not None and self.expiry_date < date.today()
+
+    @property
+    def days_to_expiry(self) -> Optional[int]:
+        if self.expiry_date is None:
+            return None
+        return (self.expiry_date - date.today()).days
+
+    def __repr__(self):
+        return f"<Batch {self.batch_number!r} P:{self.product_id} qty:{self.quantity} exp:{self.expiry_date}>"

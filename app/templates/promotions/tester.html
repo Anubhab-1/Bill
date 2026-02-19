@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block page_title %}Promo Tester{% endblock %}
+{% block page_subtitle %}Test promotions against a sample cart before going live{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    {{-- Cart Builder --}}
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p class="text-sm font-semibold text-white mb-4">Build Sample Cart</p>
+        <form id="tester-form" hx-post="{{ url_for('promotions.tester_preview') }}" hx-target="#promo-preview"
+            hx-swap="innerHTML" hx-indicator="#loading">
+            <div id="cart-rows" class="space-y-3 mb-4">
+                <div class="cart-row flex items-center gap-3">
+                    <select name="product_id[]" class="flex-1 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm
+                         focus:outline-none focus:border-brand-500">
+                        {% for p in products %}
+                        <option value="{{ p.id }}">{{ p.name }} (₹{{ p.price }})</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="qty[]" value="1" min="1" class="w-20 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm
+                        text-center focus:outline-none focus:border-brand-500">
+                    <button type="button" onclick="removeRow(this)"
+                        class="text-red-400 hover:text-red-300 text-xl leading-none">×</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 mb-5">
+                <button type="button" onclick="addRow()"
+                    class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Item
+                </button>
+            </div>
+
+            <button type="submit"
+                class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">
+                Preview Applied Promotions
+            </button>
+            <span id="loading" class="htmx-indicator mt-2 block text-xs text-gray-500 text-center hidden">
+                Evaluating…
+            </span>
+        </form>
+    </div>
+
+    {{-- Preview panel --}}
+    <div id="promo-preview"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-5 min-h-[200px] flex items-center justify-center">
+        <p class="text-sm text-gray-600">Build a cart and click "Preview" to see applied discounts.</p>
+    </div>
+</div>
+
+<script>
+    const productOptions = `{% for p in products %}<option value="{{ p.id }}">{{ p.name }} (₹{{ p.price }})</option>{% endfor %}`;
+
+    function addRow() {
+        const row = document.createElement('div');
+        row.className = 'cart-row flex items-center gap-3';
+        row.innerHTML = `
+    <select name="product_id[]"
+            class="flex-1 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500">
+      ${productOptions}
+    </select>
+    <input type="number" name="qty[]" value="1" min="1"
+           class="w-20 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:border-brand-500">
+    <button type="button" onclick="removeRow(this)"
+            class="text-red-400 hover:text-red-300 text-xl leading-none">×</button>
+  `;
+        document.getElementById('cart-rows').appendChild(row);
+    }
+
+    function removeRow(btn) {
+        const rows = document.querySelectorAll('.cart-row');
+        if (rows.length > 1) btn.closest('.cart-row').remove();
+    }
+</script>
+{% if not (request.headers.get('HX-Request')) %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block page_title %}PO #{{ po.id }}{% endblock %}
+{% block page_subtitle %}{{ po.supplier.name }} — {{ po.status.value }}{% endblock %}
+
+{% block content %}
+{% set status_colors = {
+'DRAFT': 'bg-gray-700 text-gray-300',
+'SENT': 'bg-blue-900/60 text-blue-300',
+'PARTIAL': 'bg-amber-900/60 text-amber-300',
+'RECEIVED': 'bg-emerald-900/60 text-emerald-300',
+'CANCELLED': 'bg-red-900/40 text-red-400'
+} %}
+
+<div class="mb-6">
+    <a href="{{ url_for('purchasing.index') }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to POs
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {# ── Summary card ── #}
+    <div class="lg:col-span-1 space-y-5">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-white">PO #{{ po.id }}</h2>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
+                             {{ status_colors.get(po.status.value, 'bg-gray-700 text-gray-300') }}">
+                    {{ po.status.value }}
+                    {% if po.is_overdue %}<span class="ml-1">⚠</span>{% endif %}
+                </span>
+            </div>
+
+            <dl class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Supplier</dt>
+                    <dd class="text-gray-200 font-medium text-right">{{ po.supplier.name }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Created</dt>
+                    <dd class="text-gray-400">{{ po.created_at.strftime('%d %b %Y %H:%M') }}</dd>
+                </div>
+                {% if po.expected_date %}
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Expected</dt>
+                    <dd class="{{ 'text-red-400 font-semibold' if po.is_overdue else 'text-gray-400' }}">
+                        {{ po.expected_date.strftime('%d %b %Y') }}
+                        {% if po.is_overdue %}<span class="text-xs ml-1">(overdue)</span>{% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+                <div class="flex justify-between border-t border-gray-800 pt-3">
+                    <dt class="text-gray-400 font-medium">Total Cost</dt>
+                    <dd class="text-white font-bold text-base">₹{{ "{:,.2f}".format(po.total_cost | float) }}</dd>
+                </div>
+            </dl>
+
+            {% if po.notes %}
+            <div class="border-t border-gray-800 pt-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+                <p class="text-sm text-gray-400">{{ po.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Action buttons ── #}
+        <div class="space-y-2">
+            {% if po.status == POStatus.DRAFT %}
+            <form method="POST" action="{{ url_for('purchasing.send_po', po_id=po.id) }}">
+                <button type="submit"
+                    class="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                    Mark as SENT
+                </button>
+            </form>
+            {% endif %}
+
+            {% if po.status in (POStatus.SENT, POStatus.PARTIAL) %}
+            <a href="{{ url_for('purchasing.receive_po', po_id=po.id) }}"
+                class="block w-full text-center py-2.5 px-4 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                Receive GRN
+            </a>
+            {% endif %}
+
+            {% if po.status in (POStatus.DRAFT, POStatus.SENT) %}
+            <form method="POST" action="{{ url_for('purchasing.cancel_po', po_id=po.id) }}"
+                onsubmit="return confirm('Cancel PO #{{ po.id }}?')">
+                <button type="submit" class="w-full py-2.5 px-4 bg-transparent border border-red-800 text-red-400 hover:bg-red-900/20
+                           text-sm font-medium rounded-lg transition-colors">
+                    Cancel PO
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Line items + GRNs ── #}
+    <div class="lg:col-span-2 space-y-6">
+        {# Items table #}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-gray-800">
+                <h3 class="text-sm font-semibold text-white">Ordered Items</h3>
+            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-800">
+                        <th class="px-5 py-3 text-left text-xs text-gray-500">Product</th>
+                        <th class="px-5 py-3 text-center text-xs text-gray-500">Ordered</th>
+                        <th class="px-5 py-3 text-center text-xs text-gray-500">Received</th>
+                        <th class="px-5 py-3 text-center text-xs text-gray-500">Pending</th>
+                        <th class="px-5 py-3 text-right text-xs text-gray-500">Unit Cost</th>
+                        <th class="px-5 py-3 text-right text-xs text-gray-500">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for item in po.items %}
+                    <tr>
+                        <td class="px-5 py-3 text-gray-200 font-medium">{{ item.product.name }}</td>
+                        <td class="px-5 py-3 text-center text-gray-400">{{ item.ordered_qty }}</td>
+                        <td
+                            class="px-5 py-3 text-center {{ 'text-emerald-400' if item.total_received > 0 else 'text-gray-600' }}">
+                            {{ item.total_received }}
+                        </td>
+                        <td
+                            class="px-5 py-3 text-center {{ 'text-amber-400' if item.remaining_qty > 0 else 'text-gray-600' }}">
+                            {{ item.remaining_qty }}
+                        </td>
+                        <td class="px-5 py-3 text-right text-gray-400">
+                            {% if item.unit_cost %}₹{{ "{:.2f}".format(item.unit_cost | float) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-right font-medium text-gray-300">
+                            {% if item.unit_cost %}
+                            ₹{{ "{:.2f}".format((item.unit_cost | float) * item.ordered_qty) }}
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# GRN history #}
+        {% if po.receipts %}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-gray-800">
+                <h3 class="text-sm font-semibold text-white">Goods Receipts</h3>
+            </div>
+            <div class="divide-y divide-gray-800">
+                {% for grn in po.receipts %}
+                <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-800/50">
+                    <div>
+                        <p class="text-sm font-medium text-white">GRN #{{ grn.id }}</p>
+                        <p class="text-xs text-gray-500">{{ grn.received_date.strftime('%d %b %Y') }}
+                            · {{ grn.items | length }} item(s)</p>
+                    </div>
+                    <a href="{{ url_for('purchasing.grn_detail', po_id=po.id, grn_id=grn.id) }}"
+                        class="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors">
+                        View →
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -39,7 +39,7 @@ def setup_logging(app):
         file_handler = RotatingFileHandler(
             os.path.join(log_dir, 'app.log'),
             maxBytes=5 * 1024 * 1024,
-            backupCount=5
+            backupCount=10
         )
         file_handler.setFormatter(RequestFormatter(
             '%(asctime)s | %(levelname)s | %(name)s | %(remote_addr)s | %(url)s | %(message)s'

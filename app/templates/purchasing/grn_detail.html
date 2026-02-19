@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block page_title %}GRN #{{ grn.id }}{% endblock %}
+{% block page_subtitle %}Goods Receipt — PO #{{ po.id }} from {{ po.supplier.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+    <a href="{{ url_for('purchasing.po_detail', po_id=po.id) }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to PO #{{ po.id }}
+    </a>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-semibold text-white">GRN #{{ grn.id }}</h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    Received on {{ grn.received_date.strftime('%d %B %Y') }}
+                    {% if grn.receiver %} by {{ grn.receiver.name }}{% endif %}
+                </p>
+            </div>
+            <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-900/60 text-emerald-300">
+                ✓ Received
+            </span>
+        </div>
+
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-800">
+                    <th class="px-5 py-3 text-left text-xs text-gray-500">Product</th>
+                    <th class="px-5 py-3 text-center text-xs text-gray-500">Qty Received</th>
+                    <th class="px-5 py-3 text-left text-xs text-gray-500">Batch #</th>
+                    <th class="px-5 py-3 text-left text-xs text-gray-500">Expiry</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for ri in grn.items %}
+                <tr>
+                    <td class="px-5 py-3 text-gray-200 font-medium">{{ ri.po_item.product.name }}</td>
+                    <td class="px-5 py-3 text-center text-emerald-400 font-semibold">{{ ri.received_qty }}</td>
+                    <td class="px-5 py-3 font-mono text-gray-400 text-xs">{{ ri.batch_number or '—' }}</td>
+                    <td class="px-5 py-3 text-gray-400">
+                        {% if ri.expiry_date %}{{ ri.expiry_date.strftime('%d %b %Y') }}{% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if grn.notes %}
+        <div class="px-5 py-3 border-t border-gray-800 bg-gray-800/30">
+            <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+            <p class="text-sm text-gray-400">{{ grn.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-emerald-900/20 border border-emerald-800/50 rounded-xl px-5 py-4 flex items-center gap-3">
+        <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        </svg>
+        <p class="text-sm text-emerald-300">
+            Stock has been updated and inventory logs created for all received items.
+        </p>
+    </div>
+</div>
+{% endblock %}

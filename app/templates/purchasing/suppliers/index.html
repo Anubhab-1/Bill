@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block page_title %}Suppliers{% endblock %}
+{% block page_subtitle %}Manage your vendor & supplier master data{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div></div>
+    <a href="{{ url_for('purchasing.new_supplier') }}"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        New Supplier
+    </a>
+</div>
+
+{% if suppliers %}
+<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-800">
+                <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Name</th>
+                <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Contact
+                </th>
+                <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">GST No.
+                </th>
+                <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">POs</th>
+                <th class="px-5 py-3.5 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+            {% for s in suppliers %}
+            <tr class="hover:bg-gray-800/50 transition-colors">
+                <td class="px-5 py-3.5 font-medium text-white">{{ s.name }}</td>
+                <td class="px-5 py-3.5 text-gray-400">{{ s.contact or '—' }}</td>
+                <td class="px-5 py-3.5 font-mono text-gray-400">{{ s.gst_no or '—' }}</td>
+                <td class="px-5 py-3.5 text-gray-400">{{ s.purchase_orders.count() }}</td>
+                <td class="px-5 py-3.5 text-right">
+                    <a href="{{ url_for('purchasing.edit_supplier', supplier_id=s.id) }}"
+                        class="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                        Edit
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+    <p class="text-gray-500 text-sm">No suppliers yet.</p>
+    <a href="{{ url_for('purchasing.new_supplier') }}"
+        class="mt-3 inline-block text-sm text-brand-400 hover:text-brand-300">
+        Add your first supplier →
+    </a>
+</div>
+{% endif %}
+{% endblock %}
