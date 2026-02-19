@@ -190,6 +190,14 @@ def register_commands(app):
 
     @app.cli.command('patch-db')
     def patch_db():
+    # ... (existing patch_db code) ...
+        click.echo("✅ Schema patch complete.")
+
+    from app.seed_history import seed_history
+    app.cli.add_command(seed_history)
+
+    @app.cli.command('seed-demo')
+    def seed_demo():
         """Apply schema updates: new columns and tables."""
         from sqlalchemy import text, inspect
         
@@ -298,7 +306,7 @@ def register_commands(app):
         # Users
         if not User.query.filter_by(username='admin').first():
             u = User(name='Admin User', username='admin', role=RoleEnum.admin)
-            u.set_password('demo123')
+            u.set_password('Admin@2026')
             db.session.add(u)
         
         c1 = User.query.filter_by(username='cashier1').first()

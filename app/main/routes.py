@@ -25,6 +25,25 @@ def fix_db_schema_now():
     except Exception as e:
         return f"❌ Migration failed: {str(e)}", 500
 
+@main.route("/admin/seed-history-now")
+@login_required
+def seed_history_now():
+    """Manually trigger historical data seeding."""
+    # Ensure only admin can run this
+    from flask_login import current_user
+    if current_user.role.value != 'admin':
+         return "Unauthorized", 403
+
+    from click import Context
+    from app.seed_history import seed_history
+    try:
+        # Invoke the click command programmatically
+        ctx = Context(seed_history)
+        ctx.invoke(seed_history)
+        return "✅ Historical data seeding complete! Check Dashboard.", 200
+    except Exception as e:
+        return f"❌ Seeding failed: {str(e)}", 500
+
 
 @main.route("/health")
 def health():
