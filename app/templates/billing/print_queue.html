@@ -29,7 +29,7 @@
             </div>
 
             <div class="flex gap-3">
-                <a href="{{ url_for('billing.invoice', sale_id=sale.id) }}" target="_blank"
+                <a href="{{ url_for('billing.invoice', sale_id=sale.id) }}?autoprint=1" target="_blank"
                     class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

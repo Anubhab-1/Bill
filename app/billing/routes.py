@@ -742,7 +742,8 @@ def mark_printed(sale_id):
     if sale:
         sale.is_printed = True
         db.session.commit()
-        return '', 204  # No content, just success
+        # Return empty string with 200 OK for safer HTMX swapping
+        return '', 200
     return 'Sale not found', 404
         
 @billing.route('/print-queue')
@@ -803,10 +804,15 @@ def returns_process(sale_id):
 
     if request.method == 'POST':
         try:
+            current_app.logger.info(f"Processing return for Sale {sale.id} (Inv: {sale.invoice_number})")
+            
             # Process the return
             refund_method = request.form.get('refund_method')
             note = request.form.get('note')
             
+            if not refund_method:
+                 raise ValueError("Refund method is required.")
+
             new_return = Return(
                 sale_id=sale.id,
                 processed_by=session['user_id'],
@@ -821,10 +827,18 @@ def returns_process(sale_id):
             for item in sale.items:
                 # Get return qty from form for this item
                 qty_str = request.form.get(f'qty_{item.id}')
+                
+                # Log what we received
+                # current_app.logger.debug(f"Item {item.id}: Input qty='{qty_str}'")
+
                 if not qty_str:
                     continue
                     
-                qty_to_return = int(qty_str)
+                try:
+                    qty_to_return = int(qty_str)
+                except ValueError:
+                    continue
+                    
                 if qty_to_return <= 0:
                     continue
 
@@ -862,15 +876,16 @@ def returns_process(sale_id):
                 # ── Log Inventory Change ──
                 log = InventoryLog(
                     product_id=product.id,
-                    change_type='return',
-                    quantity=qty_to_return,
-                    reason=f"Return: Invoice {sale.invoice_number}",
-                    user_id=session['user_id']
+                    old_stock=product.stock - qty_to_return,
+                    new_stock=product.stock,
+                    changed_by=session['user_id'],
+                    reason=f"Return: Invoice {sale.invoice_number}"
                 )
                 db.session.add(log)
 
             if not items_returned:
-                flash('No items selected for return.', 'warning')
+                current_app.logger.warning(f"Return failed (No items selected) for {sale.invoice_number}")
+                flash('No items selected for return. Please enter a quantity > 0.', 'warning')
                 return redirect(url_for('billing.returns_process', sale_id=sale.id))
 
             new_return.total_refunded = total_refund
