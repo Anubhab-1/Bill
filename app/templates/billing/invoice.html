@@ -37,160 +37,214 @@
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-start justify-center py-10 px-4">
+<body class="bg-gray-100 min-h-screen flex items-start justify-center py-10 px-4 print:p-0 print:bg-white">
 
     <!-- ── Print / Back toolbar ─────────────────────────────────── -->
-    <div class="no-print fixed top-4 right-4 flex gap-3 z-10">
-        <a href="{{ url_for('billing.index') }}" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm
-              font-medium rounded-lg transition-colors">
-            ← New Sale
+    <div class="no-print fixed top-6 right-6 flex flex-col gap-3 z-50">
+        <a href="{{ url_for('billing.index') }}" class="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm
+              font-medium rounded-full shadow-lg transition-all hover:shadow-xl flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            New Sale
         </a>
-        <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm
-             font-semibold rounded-lg transition-colors">
-            🖨 Print Invoice
+        <button onclick="window.print()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm
+             font-semibold rounded-full shadow-lg transition-all hover:shadow-xl flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Invoice
         </button>
         {% if not sale.is_printed and not reprint_mode %}
         <button hx-post="{{ url_for('billing.mark_printed', sale_id=sale.id) }}" hx-swap="outerHTML"
-            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors">
-            ✓ Mark Printed
+            class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-full shadow-lg transition-all hover:shadow-xl flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Mark Printed
         </button>
         {% endif %}
     </div>
 
-    <!-- ── Invoice Paper ────────────────────────────────────────── -->
-    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl print-shadow p-10">
+    <!-- ── Invoice Paper (A4 Aspect Ratio) ──────────────────────── -->
+    <div
+        class="w-full max-w-[210mm] min-h-[297mm] bg-white shadow-2xl print-shadow print:w-full print:max-w-none print:shadow-none p-12 relative overflow-hidden">
 
-        <!-- Header -->
-        <div class="flex items-start justify-between mb-8">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">🏬 Mall Billing System</h1>
-                <p class="text-sm text-gray-500 mt-1">Your Mall Name Here · City, State</p>
-                <p class="text-sm text-gray-500">GSTIN: 00AAAAA0000A1Z5 (placeholder)</p>
+        <!-- Decorative Top Bar -->
+        <div class="absolute top-0 left-0 w-full h-2 bg-indigo-600 print:bg-black"></div>
+
+        <!-- ── Header ───────────────────────────────────────────── -->
+        <header class="flex justify-between items-start mb-12 mt-4">
+            <div class="space-y-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <!-- Logo Placeholder -->
+                    <div
+                        class="w-10 h-10 rounded bg-indigo-600 print:bg-black flex items-center justify-center text-white">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m8-2a2 2 0 01-2-2h-4a2 2 0 01-2 2v-4a2 2 0 012-2h4a2 2 0 012 2v4z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900">Phoenix Mall</h1>
+                </div>
+                <p class="text-gray-500 text-sm">123 Market Street, City Center</p>
+                <p class="text-gray-500 text-sm">Mumbai, Maharashtra - 400001</p>
+                <p class="text-gray-500 text-sm font-medium mt-1">GSTIN: 27AABCU9603R1ZN</p>
+                <p class="text-gray-500 text-sm">support@phoenixmall.com | +91 98765 43210</p>
             </div>
+
             <div class="text-right">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Invoice</p>
-                <p class="text-2xl font-bold text-indigo-600 mt-1">{{ sale.invoice_number }}</p>
+                <p class="text-4xl font-light text-gray-300 uppercase tracking-widest mb-2">Invoice</p>
+                <p class="text-lg font-bold text-gray-900">#{{ sale.invoice_number }}</p>
                 {% if reprint_mode %}
                 <p
-                    class="text-xs font-bold text-red-500 uppercase border border-red-500 rounded px-1 mt-1 inline-block">
-                    Reprint
+                    class="inline-block px-2 py-0.5 mt-2 text-xs font-bold text-red-600 border border-red-600 rounded uppercase tracking-wider">
+                    Duplicate / Reprint
                 </p>
                 {% endif %}
             </div>
+        </header>
+
+        <!-- ── Details Grid ─────────────────────────────────────── -->
+        <div class="grid grid-cols-2 gap-12 mb-12">
+            <!-- Left: Bill To -->
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Bill To</p>
+                {% if sale.customer %}
+                <p class="text-gray-900 font-bold text-lg">{{ sale.customer.name }}</p>
+                <p class="text-gray-600 text-sm">{{ sale.customer.phone }}</p>
+                {% if sale.customer.email %}
+                <p class="text-gray-600 text-sm">{{ sale.customer.email }}</p>
+                {% endif %}
+                {% else %}
+                <p class="text-gray-900 font-medium italic">Walk-in Customer</p>
+                {% endif %}
+            </div>
+
+            <!-- Right: Invoice Meta -->
+            <div class="grid grid-cols-2 gap-y-4">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Date Issued</p>
+                    <p class="text-gray-900 font-medium">{{ sale.created_at.strftime('%d %b %Y') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Time</p>
+                    <p class="text-gray-900 font-medium">{{ sale.created_at.strftime('%I:%M %p') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Cashier</p>
+                    <p class="text-gray-900 font-medium truncate">{{ sale.cashier.name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Payment</p>
+                    <p class="text-gray-900 font-medium capitalize truncate">
+                        {% if sale.payments %}
+                        {{ sale.payments[0].payment_method }}
+                        {% if sale.payments|length > 1 %} + {{ sale.payments|length - 1 }} more{% endif %}
+                        {% else %}
+                        Pending
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
 
-        <!-- Meta row -->
-        <div class="grid grid-cols-2 gap-6 mb-8 text-sm">
-            <div>
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Date & Time</p>
-                <p class="text-gray-800 font-medium">
-                    {{ sale.created_at.strftime('%d %b %Y, %I:%M %p') }}
-                </p>
-            </div>
-            <div>
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Cashier</p>
-                <p class="text-gray-800 font-medium">{{ sale.cashier.name }}</p>
-            </div>
-        </div>
-
-        <!-- Divider -->
-        <hr class="border-gray-200 mb-6" />
-
-        <!-- Items table -->
-        <table class="w-full text-sm mb-6">
+        <!-- ── Items Table ──────────────────────────────────────── -->
+        <table class="w-full mb-8">
             <thead>
-                <tr class="border-b border-gray-200 text-left">
-                    <th class="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
-                    <th class="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Qty</th>
-                    <th class="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Rate</th>
-                    <th class="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">GST</th>
-                    <th class="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Amount</th>
+                <tr class="border-b-2 border-gray-900 text-left">
+                    <th class="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider w-1/2">Item Description
+                    </th>
+                    <th class="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-center">Qty</th>
+                    <th class="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">Price</th>
+                    <th class="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">GST</th>
+                    <th class="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">Total</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="text-sm">
                 {% for item in sale.items %}
-                <tr class="border-b border-gray-100 last:border-0">
-                    <td class="py-3 text-gray-800 font-medium">
-                        {% if item.weight_kg %}⚖ {% endif %}{{ item.product.name }}
-                        <span class="block text-xs text-gray-400 font-mono">{{ item.product.barcode }}</span>
-                        {% if item.weight_kg %}
-                        <span class="block text-xs text-indigo-600 font-semibold mt-0.5">
-                            {{ "{:.3f}".format(item.weight_kg | float) }} kg
-                        </span>
-                        {% endif %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-4 pr-4">
+                        <p class="font-semibold text-gray-900">
+                            {{ item.product.name }}
+                            {% if item.weight_kg %}
+                            <span class="text-xs font-normal text-gray-500 ml-1">({{ "{:.3f}".format(item.weight_kg) }}
+                                kg)</span>
+                            {% endif %}
+                        </p>
+                        <p class="text-xs text-gray-500 font-mono mt-0.5">{{ item.product.barcode }}</p>
                     </td>
-                    <td class="py-3 text-center text-gray-700">
-                        {% if item.weight_kg %}
-                        <span class="text-xs text-gray-400">—</span>
-                        {% else %}
-                        {{ item.quantity }}
-                        {% endif %}
+                    <td class="py-4 text-center text-gray-600 font-medium">
+                        {{ item.quantity if not item.weight_kg else '-' }}
                     </td>
-                    <td class="py-3 text-right text-gray-700">
-                        {% if item.weight_kg %}
-                        ₹{{ "{:.2f}".format(item.price_at_sale | float) }}<span class="text-xs text-gray-400">/kg</span>
-                        {% else %}
-                        ₹{{ "{:.2f}".format(item.price_at_sale | float) }}
-                        {% endif %}
+                    <td class="py-4 text-right text-gray-600 font-mono">
+                        {{ "{:.2f}".format(item.price_at_sale) }}
                     </td>
-                    <td class="py-3 text-right text-gray-500 text-xs">
-                        {{ item.gst_percent }}%<br>
-                        <span class="text-gray-400">₹{{ "{:.2f}".format(item.gst_amount | float) }}</span>
+                    <td class="py-4 text-right text-gray-500 text-xs">
+                        <div>{{ item.gst_percent }}%</div>
+                        <div class="text-[10px]">₹{{ "{:.2f}".format(item.gst_amount) }}</div>
                     </td>
-                    <td class="py-3 text-right font-semibold text-gray-900">
-                        ₹{{ "{:.2f}".format(item.subtotal_with_gst | float) }}
+                    <td class="py-4 text-right font-bold text-gray-900 font-mono">
+                        {{ "{:.2f}".format(item.subtotal_with_gst) }}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- GST Breakdown + Totals -->
-        <div class="flex justify-end mb-8">
-            <div class="w-72 space-y-2 text-sm">
-                <div class="flex justify-between text-gray-600">
-                    <span>Subtotal (excl. GST)</span>
-                    <span>₹{{ "{:.2f}".format(sale.total_amount | float) }}</span>
+        <!-- ── Totals Section ───────────────────────────────────── -->
+        <div class="flex flex-col items-end border-t-2 border-gray-900 pt-8 mb-16">
+            <div class="w-72 space-y-3">
+                <div class="flex justify-between text-sm text-gray-500">
+                    <span>Subtotal</span>
+                    <span class="font-mono text-gray-900">₹{{ "{:.2f}".format(sale.total_amount) }}</span>
                 </div>
-
-                <!-- Per-rate GST breakdown -->
-                {% set gst_rates = {} %}
-                {% for item in sale.items %}
-                {# Accumulate GST amounts by rate — Jinja2 doesn't support dict mutation,
-                so we show per-item GST in the table above and show total GST here #}
-                {% endfor %}
-                <div class="flex justify-between text-gray-600">
+                <div class="flex justify-between text-sm text-gray-500">
                     <span>Total GST</span>
-                    <span>₹{{ "{:.2f}".format(sale.gst_total | float) }}</span>
+                    <span class="font-mono text-gray-900">₹{{ "{:.2f}".format(sale.gst_total) }}</span>
+                </div>
+                <!--
+                <div class="flex justify-between text-sm text-green-600">
+                    <span>Discount</span>
+                    <span class="font-mono">-₹0.00</span>
+                </div>
+                -->
+                <div class="h-px bg-gray-200 my-2"></div>
+                <div class="flex justify-between items-baseline">
+                    <span class="text-base font-bold text-gray-900 uppercase tracking-widest">Grand Total</span>
+                    <span class="text-3xl font-bold text-indigo-600 print:text-black font-mono">
+                        ₹{{ "{:.2f}".format(sale.grand_total) }}
+                    </span>
                 </div>
 
-                <div class="flex justify-between font-bold text-gray-900 text-base
-                    pt-3 border-t border-gray-200">
-                    <span>Grand Total</span>
-                    <span class="text-indigo-600">₹{{ "{:.2f}".format(sale.grand_total | float) }}</span>
-                </div>
-
-                {% if sale.payments %}
-                <div class="mt-4 pt-3 border-t border-gray-200">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Payment Mode</p>
-                    {% for p in sale.payments %}
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span class="capitalize">{{ p.payment_method }}</span>
-                        <span>₹{{ "{:.2f}".format(p.amount | float) }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
+                <!-- Amount in Words (Placeholder) -->
+                <!-- <p class="text-xs text-right text-gray-400 mt-2 italic">Three Thousand Four Hundred Only</p> -->
             </div>
         </div>
 
-        <!-- Footer -->
-        <hr class="border-gray-200 mb-6" />
-        <div class="text-center text-xs text-gray-400 space-y-1">
-            <p class="font-medium text-gray-600">Thank you for shopping with us!</p>
-            <p>This is a computer-generated invoice and does not require a signature.</p>
-            <p class="font-mono text-gray-300 mt-2">{{ sale.invoice_number }}</p>
+        <!-- ── Footer ───────────────────────────────────────────── -->
+        <div class="grid grid-cols-2 gap-8 border-t border-gray-200 pt-8 text-xs text-gray-500">
+            <div>
+                <p class="font-bold text-gray-900 uppercase mb-2">Terms & Conditions</p>
+                <ul class="list-disc pl-4 space-y-1">
+                    <li>Goods once sold will not be taken back.</li>
+                    <li>Exchange possible within 7 days with original invoice.</li>
+                    <li>Warranty as per manufacturer terms.</li>
+                </ul>
+            </div>
+            <div class="text-right">
+                <p class="font-bold text-gray-900 uppercase mb-2">Payment Details</p>
+                <p>Bank: HDFC Bank</p>
+                <p>Acc: 50100XXXXX1234</p>
+                <p>IFSC: HDFC0001234</p>
+                <p class="mt-4 font-medium text-gray-800">Thank you for your business!</p>
+            </div>
+        </div>
+
+        <!-- Watermark / Branding -->
+        <div class="absolute bottom-4 left-0 w-full text-center">
+            <p class="text-[10px] text-gray-300 uppercase tracking-[0.3em]">Generated by Mall Billing System</p>
         </div>
 
     </div>
