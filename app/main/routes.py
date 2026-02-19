@@ -13,6 +13,18 @@ from app import db
 from app.main import main
 from app.auth.decorators import login_required
 
+@main.route("/fix-db-schema-now")
+def fix_db_schema_now():
+    """Emergency route to manually trigger DB migration."""
+    from app.migration import run_auto_migration
+    from flask import current_app
+    
+    try:
+        run_auto_migration(current_app._get_current_object())
+        return "✅ Migration triggered. Check logs. If no errors, DB is fixed.", 200
+    except Exception as e:
+        return f"❌ Migration failed: {str(e)}", 500
+
 
 @main.route("/health")
 def health():

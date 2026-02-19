@@ -11,10 +11,9 @@ def run_auto_migration(app):
     """
     with app.app_context():
         try:
-            logger.info("🔄 Checking database schema...")
+            logger.info("🔄 Checking database schema (Robust Mode)...")
             
-            # 0. Compare imports to ensure all models are known to SQLAlchemy
-            # (Importing them registers them with db.metadata)
+            # 0. Ensure models allowed
             import app.auth.models
             import app.inventory.models
             import app.billing.models
@@ -25,65 +24,33 @@ def run_auto_migration(app):
             # 1. Create missing tables
             db.create_all()
             
-            # 2. Add columns to existing tables using Inspector
+            # 2. Add columns using PostgreSQL 'IF NOT EXISTS' 
+            # This is safer and doesn't rely on Inspector
             with db.engine.connect() as conn:
-                inspector = inspect(conn)
-                
-                # Check for table existence first
-                existing_tables = inspector.get_tables()
+                try:
+                    # Sales: payment_method
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL"))
+                    # Sales: is_printed
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS is_printed BOOLEAN DEFAULT FALSE"))
+                    # Sales: customer_id
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id)"))
+                    
+                    # Products: is_active
+                    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL"))
+                    # Products: is_weighed
+                    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_weighed BOOLEAN DEFAULT FALSE NOT NULL"))
+                    # Products: price_per_kg
+                    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_per_kg NUMERIC(10,2)"))
+                    
+                    # SaleItems: weight_kg
+                    conn.execute(text("ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(8,3)"))
+                    # SaleItems: unit_label
+                    conn.execute(text("ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS unit_label VARCHAR(10)"))
 
-                def column_exists(table, column):
-                    if table not in existing_tables:
-                        return False
-                    cols = [c['name'] for c in inspector.get_columns(table)]
-                    return column in cols
-
-                # --- MIGRATIONS ---
-
-                # Sales: payment_method
-                if 'sales' in existing_tables and not column_exists('sales', 'payment_method'):
-                    logger.info("🛠️  Adding 'payment_method' to sales")
-                    conn.execute(text("ALTER TABLE sales ADD COLUMN payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL"))
-
-                # Sales: is_printed
-                if 'sales' in existing_tables and not column_exists('sales', 'is_printed'):
-                    logger.info("🛠️  Adding 'is_printed' to sales")
-                    conn.execute(text("ALTER TABLE sales ADD COLUMN is_printed BOOLEAN DEFAULT FALSE"))
-
-                # Sales: customer_id
-                if 'customers' in existing_tables and 'sales' in existing_tables and not column_exists('sales', 'customer_id'):
-                    logger.info("🛠️  Adding 'customer_id' to sales")
-                    conn.execute(text("ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id)"))
-
-                # Products: is_active
-                if 'products' in existing_tables and not column_exists('products', 'is_active'):
-                    logger.info("🛠️  Adding 'is_active' to products")
-                    conn.execute(text("ALTER TABLE products ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
-
-                # Products: is_weighed (THE CRITICAL FIX)
-                if 'products' in existing_tables and not column_exists('products', 'is_weighed'):
-                    logger.info("🛠️  Adding 'is_weighed' to products")
-                    conn.execute(text("ALTER TABLE products ADD COLUMN is_weighed BOOLEAN DEFAULT FALSE NOT NULL"))
-
-                # Products: price_per_kg
-                if 'products' in existing_tables and not column_exists('products', 'price_per_kg'):
-                    logger.info("🛠️  Adding 'price_per_kg' to products")
-                    conn.execute(text("ALTER TABLE products ADD COLUMN price_per_kg NUMERIC(10,2)"))
-
-                # SaleItems: weight_kg
-                if 'sale_items' in existing_tables and not column_exists('sale_items', 'weight_kg'):
-                    logger.info("🛠️  Adding 'weight_kg' to sale_items")
-                    conn.execute(text("ALTER TABLE sale_items ADD COLUMN weight_kg NUMERIC(8,3)"))
-
-                # SaleItems: unit_label
-                if 'sale_items' in existing_tables and not column_exists('sale_items', 'unit_label'):
-                    logger.info("🛠️  Adding 'unit_label' to sale_items")
-                    conn.execute(text("ALTER TABLE sale_items ADD COLUMN unit_label VARCHAR(10)"))
-
-                conn.commit()
-                logger.info("✅ Database schema check complete.")
+                    conn.commit()
+                    logger.info("✅ Database schema patched successfully.")
+                except Exception as e:
+                    logger.error(f"⚠️ SQL Patch warning: {e}")
 
         except Exception as e:
-            logger.error(f"❌ Schema migration failed: {e}")
-            # We don't raise here to allow app to try starting, 
-            # but ideally this should be fixed.
+            logger.error(f"❌ Migration wrapper failed: {e}")
