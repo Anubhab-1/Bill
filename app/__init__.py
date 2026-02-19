@@ -16,7 +16,13 @@ def create_app(config_name='default'):
     setup_logging(app)
 
     # ── Extensions ────────────────────────────────────────────────
+    # ── Extensions ────────────────────────────────────────────────
     db.init_app(app)
+
+    # ── Auto-Migration (Critical for Production) ──
+    # Runs inline to ensure schema is correct before any request
+    from app.migration import run_auto_migration
+    run_auto_migration(app)
 
     # ── Blueprints ────────────────────────────────────────────────
     from app.main import main as main_blueprint
