@@ -279,8 +279,25 @@ def register_commands(app):
 # This allows the package to be imported as an application object directly.
 import os
 try:
-    # Only create if not main script (to avoid duplicate creation in run.py)
-    if __name__ != '__main__':
-        app = create_app(os.environ.get('FLASK_ENV', 'production'))
+    # Only create if not main script and NOT running a flask command (to avoid double seed)
+    if __name__ != '__main__' and not os.environ.get('FLASK_RUN_FROM_CLI'):
+        env_name = os.environ.get('FLASK_ENV', 'production')
+        app = create_app(env_name)
+        
+        # ── AUTO-SEED (moved from wsgi.py) ──
+        # Critical for Render Free Tier where Shell is hard to access
+        if env_name == 'production':
+            try:
+                with app.app_context():
+                    db.create_all()
+                    from app.auth.models import User
+                    if not User.query.first():
+                        print("🌱 Database empty. Auto-seeding...")
+                        import subprocess
+                        # Using subprocess to run the distinct CLI command
+                        subprocess.run(["flask", "seed-demo"], check=True)
+            except Exception as e:
+                print(f"⚠️ Auto-seed failed: {e}")
+                
 except Exception:
     pass
