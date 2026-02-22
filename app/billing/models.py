@@ -168,6 +168,7 @@ class CashSession(db.Model):
     opening_cash = db.Column(db.Numeric(10, 2), nullable=False)
     system_total = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     closing_cash = db.Column(db.Numeric(10, 2), nullable=True)
+    closing_notes = db.Column(db.String(255), nullable=True)
     start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     end_time = db.Column(db.DateTime, nullable=True)
 

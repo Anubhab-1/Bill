@@ -14,6 +14,7 @@
                 <th class="px-6 py-4 text-right">System Sales</th>
                 <th class="px-6 py-4 text-right">Closing Balance</th>
                 <th class="px-6 py-4 text-right">Discrepancy</th>
+                <th class="px-6 py-4 text-left">Notes</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-800/60">
@@ -72,10 +73,14 @@
                     <span class="text-gray-600">-</span>
                     {% endif %}
                 </td>
+                <td class="px-6 py-4 text-gray-400 text-xs max-w-xs truncate"
+                    title="{{ s.closing_notes if s.closing_notes else '' }}">
+                    {{ s.closing_notes if s.closing_notes else '<span class="text-gray-600 italic">-</span>'|safe }}
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                     No session history found.
                 </td>
             </tr>

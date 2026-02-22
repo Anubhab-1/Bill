@@ -134,7 +134,10 @@ def close_session():
     if request.method == 'POST':
         try:
             closing = Decimal(request.form['closing_cash'])
+            notes = request.form.get('closing_notes', '').strip()
+            
             active.closing_cash = closing
+            active.closing_notes = notes if notes else None
             active.end_time = datetime.utcnow()
             
             # Flush to calculate discrepancy property

@@ -62,6 +62,9 @@ def run_auto_migration(app):
                     # Products: price_per_kg
                     conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_per_kg NUMERIC(10,2)"))
                     
+                    # CashSessions: closing_notes
+                    conn.execute(text("ALTER TABLE cash_sessions ADD COLUMN IF NOT EXISTS closing_notes VARCHAR(255)"))
+                    
                     # Users: is_active
                     conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL"))
                     
@@ -97,6 +100,9 @@ def run_auto_migration(app):
                         conn.execute(text("ALTER TABLE sale_items ADD COLUMN snapshot_size VARCHAR(10)"))
                     if not column_exists('sale_items', 'snapshot_color'):
                         conn.execute(text("ALTER TABLE sale_items ADD COLUMN snapshot_color VARCHAR(50)"))
+
+                    if not column_exists('cash_sessions', 'closing_notes'):
+                        conn.execute(text("ALTER TABLE cash_sessions ADD COLUMN closing_notes VARCHAR(255)"))
 
                     if not column_exists('users', 'is_active'):
                         conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
