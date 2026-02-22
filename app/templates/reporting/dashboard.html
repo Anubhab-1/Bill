@@ -73,7 +73,7 @@
 </div>
 
 <!-- Quick Links -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
     <a href="{{ url_for('reporting.sales_report') }}"
         class="block p-6 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition-colors group">
         <h4 class="text-lg font-semibold text-white group-hover:text-brand-400 mb-2">Sales Report</h4>
@@ -91,6 +91,12 @@
         class="block p-6 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition-colors group">
         <h4 class="text-lg font-semibold text-white group-hover:text-brand-400 mb-2">Inventory Report</h4>
         <p class="text-sm text-gray-400">Current stock levels, valuation, and low stock items requiring reorder.</p>
+    </a>
+
+    <a href="{{ url_for('reporting.apparel_report') }}"
+        class="block p-6 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition-colors group">
+        <h4 class="text-lg font-semibold text-white group-hover:text-brand-400 mb-2">Apparel Analytics</h4>
+        <p class="text-sm text-gray-400">Top sizes, top colors, and sales split by brand and category.</p>
     </a>
 </div>
 {% endblock %}

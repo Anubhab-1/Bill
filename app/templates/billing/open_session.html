@@ -17,6 +17,7 @@
         <p class="text-gray-400 text-sm text-center mb-8">Enter the initial cash amount in your drawer.</p>
 
         <form method="post" action="{{ url_for('billing.open_session') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-6">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Opening Cash
                     (₹)</label>

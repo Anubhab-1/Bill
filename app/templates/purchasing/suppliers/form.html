@@ -19,6 +19,7 @@
         </h2>
 
         <form method="POST" action="{{ form_action }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-5">
                 <label for="name" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
                     Name <span class="text-red-400">*</span>

@@ -76,7 +76,8 @@ class ComprehensiveSmokeTest(unittest.TestCase):
         self.login()
         response = self.client.get('/inventory/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Inventory', response.data)
+        assert b"Inventory Management" in response.data
+        # Note: 'Barcode' is now on the variant page, not the main product form
         print(" -> Inventory List OK")
 
         response = self.client.get('/inventory/new')

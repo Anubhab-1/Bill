@@ -25,6 +25,7 @@
         </div>
 
         <form method="post" action="{{ url_for('billing.close_session') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-6">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Total Closing Cash
                     (Drawer Count)</label>

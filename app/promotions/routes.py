@@ -1,185 +1,156 @@
-"""
-app/promotions/routes.py
-------------------------
-Admin routes for managing promotions and testing them against sample carts.
-"""
-import json
-from datetime import date
-from decimal import Decimal
+import io
+from datetime import datetime
+from flask import abort, flash, redirect, render_template, request, url_for, current_app
+from sqlalchemy import desc
 
-from flask import (
-    render_template, redirect, url_for,
-    request, flash, session, jsonify
-)
-
+from app import db
+from app.auth.decorators import admin_required, login_required
 from app.promotions import promotions
-from app.promotions.models import Promotion, AppliedPromotion, PROMO_TYPES
+from app.promotions.models import Promotion
 from app.promotions.engine import evaluate_promotions
 from app.inventory.models import Product
-from app.auth.decorators import admin_required
-from app import db
-
-
-# ── Helper ────────────────────────────────────────────────────────
-
-def _parse_params_from_form(promo_type: str) -> dict:
-    """Extract and structure promotion params from the submitted form."""
-    if promo_type == 'percentage_item':
-        raw_ids = request.form.get('param_product_ids', '')
-        pids = [int(x.strip()) for x in raw_ids.split(',') if x.strip().isdigit()]
-        return {'product_ids': pids, 'percent': float(request.form.get('param_percent', 0))}
-
-    elif promo_type == 'fixed_item':
-        raw_ids = request.form.get('param_product_ids', '')
-        pids = [int(x.strip()) for x in raw_ids.split(',') if x.strip().isdigit()]
-        return {'product_ids': pids, 'amount': float(request.form.get('param_amount', 0))}
-
-    elif promo_type == 'bill_percentage':
-        return {'percent': float(request.form.get('param_percent', 0))}
-
-    elif promo_type == 'buy_x_get_y':
-        return {
-            'product_id': int(request.form.get('param_product_id', 0)),
-            'buy_qty':    int(request.form.get('param_buy_qty', 1)),
-            'free_qty':   int(request.form.get('param_free_qty', 1)),
-        }
-
-    return {}
-
-
-# ── List ──────────────────────────────────────────────────────────
 
 @promotions.route('/')
 @admin_required
 def index():
-    all_promos = Promotion.query.order_by(Promotion.is_active.desc(), Promotion.id.desc()).all()
-    return render_template('promotions/index.html',
-                           title='Promotions', promos=all_promos, promo_types=dict(PROMO_TYPES))
-
-
-# ── Create ────────────────────────────────────────────────────────
+    """List all promotions."""
+    promos = Promotion.query.order_by(desc(Promotion.is_active), desc(Promotion.id)).all()
+    return render_template('promotions/index.html', title='Promotions', promos=promos)
 
 @promotions.route('/new', methods=['GET', 'POST'])
 @admin_required
-def new_promo():
-    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
+def create():
+    """Create a new promotion."""
+    errors = {}
     if request.method == 'POST':
-        promo_type = request.form.get('promo_type', '')
-        if promo_type not in [p[0] for p in PROMO_TYPES]:
-            flash('Invalid promotion type.', 'error')
-            return render_template('promotions/form.html', title='New Promotion',
-                                   promo=None, promo_types=PROMO_TYPES, products=products)
+        name = request.form.get('name', '').strip()
+        promo_type = request.form.get('promo_type', '').strip()
+        start_date_s = request.form.get('start_date', '').strip()
+        end_date_s = request.form.get('end_date', '').strip()
+        is_active = request.form.get('is_active') == 'on'
+        
+        # Simple validation
+        if not name: errors['name'] = 'Name is required'
+        if not promo_type: errors['promo_type'] = 'Type is required'
+        
+        # Parse dates
+        start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
+        end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
 
-        try:
-            start = request.form.get('start_date') or None
-            end   = request.form.get('end_date')   or None
+        # Build parameters
+        params = {}
+        if promo_type == 'buy_x_get_y':
+            params['product_id'] = int(request.form.get('product_id', 0))
+            params['buy_qty']    = int(request.form.get('buy_qty', 1))
+            params['free_qty']   = int(request.form.get('free_qty', 1))
+        elif promo_type == 'flat_off':
+            params['min_spend'] = float(request.form.get('min_spend', 0))
+            params['discount_amount'] = float(request.form.get('discount_amount', 0))
+        elif promo_type == 'percent_off':
+            params['min_spend'] = float(request.form.get('min_spend', 0))
+            params['discount_percent'] = float(request.form.get('discount_percent', 0))
+
+        if not errors:
             promo = Promotion(
-                name        = request.form.get('name', '').strip(),
-                promo_type  = promo_type,
-                params      = json.dumps(_parse_params_from_form(promo_type)),
-                start_date  = date.fromisoformat(start) if start else None,
-                end_date    = date.fromisoformat(end)   if end   else None,
-                is_active   = bool(request.form.get('is_active')),
-                max_uses    = int(request.form.get('max_uses')) if request.form.get('max_uses') else None,
-                stackable   = bool(request.form.get('stackable')),
-                created_by  = session.get('user_id'),
+                name=name,
+                promo_type=promo_type,
+                start_date=start_date,
+                end_date=end_date,
+                is_active=is_active
             )
+            promo.params_dict = params
             db.session.add(promo)
             db.session.commit()
-            flash(f'Promotion "{promo.name}" created.', 'success')
+            flash('Promotion created successfully', 'success')
             return redirect(url_for('promotions.index'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error: {e}', 'error')
 
-    return render_template('promotions/form.html', title='New Promotion',
-                           promo=None, promo_types=PROMO_TYPES, products=products)
-
-
-# ── Edit ──────────────────────────────────────────────────────────
+    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
+    return render_template('promotions/form.html', title='New Promotion', promo=None, errors=errors, products=products)
 
 @promotions.route('/<int:promo_id>/edit', methods=['GET', 'POST'])
 @admin_required
-def edit_promo(promo_id):
-    promo    = db.session.get(Promotion, promo_id) or (None, __import__('flask').abort(404))[0]
-    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-
-    if request.method == 'POST':
-        promo_type = request.form.get('promo_type', promo.promo_type)
-        try:
-            start = request.form.get('start_date') or None
-            end   = request.form.get('end_date')   or None
-            promo.name       = request.form.get('name', '').strip()
-            promo.promo_type = promo_type
-            promo.params     = json.dumps(_parse_params_from_form(promo_type))
-            promo.start_date = date.fromisoformat(start) if start else None
-            promo.end_date   = date.fromisoformat(end)   if end   else None
-            promo.is_active  = bool(request.form.get('is_active'))
-            promo.max_uses   = int(request.form.get('max_uses')) if request.form.get('max_uses') else None
-            promo.stackable  = bool(request.form.get('stackable'))
-            db.session.commit()
-            flash(f'Promotion "{promo.name}" updated.', 'success')
-            return redirect(url_for('promotions.index'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error: {e}', 'error')
-
-    return render_template('promotions/form.html', title='Edit Promotion',
-                           promo=promo, promo_types=PROMO_TYPES, products=products)
-
-
-# ── Toggle active ─────────────────────────────────────────────────
-
-@promotions.route('/<int:promo_id>/toggle', methods=['POST'])
-@admin_required
-def toggle_promo(promo_id):
+def edit(promo_id):
+    """Edit an existing promotion."""
     promo = db.session.get(Promotion, promo_id)
-    if promo:
-        promo.is_active = not promo.is_active
-        db.session.commit()
-        status = 'Active' if promo.is_active else 'Inactive'
-        flash(f'"{promo.name}" is now {status}.', 'success')
-    return redirect(url_for('promotions.index'))
+    if not promo:
+        abort(404)
+    
+    errors = {}
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        promo_type = request.form.get('promo_type', '').strip()
+        start_date_s = request.form.get('start_date', '').strip()
+        end_date_s = request.form.get('end_date', '').strip()
+        is_active = request.form.get('is_active') == 'on'
+        
+        if not name: errors['name'] = 'Name is required'
+        
+        params = {}
+        if promo_type == 'buy_x_get_y':
+            params['product_id'] = int(request.form.get('product_id', 0))
+            params['buy_qty']    = int(request.form.get('buy_qty', 1))
+            params['free_qty']   = int(request.form.get('free_qty', 1))
+        elif promo_type == 'flat_off':
+            params['min_spend'] = float(request.form.get('min_spend', 0))
+            params['discount_amount'] = float(request.form.get('discount_amount', 0))
+        elif promo_type == 'percent_off':
+            params['min_spend'] = float(request.form.get('min_spend', 0))
+            params['discount_percent'] = float(request.form.get('discount_percent', 0))
 
+        if not errors:
+            promo.name = name
+            promo.promo_type = promo_type
+            promo.start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
+            promo.end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
+            promo.is_active = is_active
+            promo.params_dict = params
+            db.session.commit()
+            flash('Promotion updated successfully', 'success')
+            return redirect(url_for('promotions.index'))
 
-# ── Delete ────────────────────────────────────────────────────────
+    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
+    return render_template('promotions/form.html', title='Edit Promotion', promo=promo, errors=errors, products=products)
 
 @promotions.route('/<int:promo_id>/delete', methods=['POST'])
 @admin_required
-def delete_promo(promo_id):
+def delete(promo_id):
+    """Delete a promotion."""
     promo = db.session.get(Promotion, promo_id)
-    if promo:
-        name = promo.name
-        db.session.delete(promo)
-        db.session.commit()
-        flash(f'Promotion "{name}" deleted.', 'success')
+    if not promo:
+        abort(404)
+    db.session.delete(promo)
+    db.session.commit()
+    flash('Promotion deleted', 'success')
     return redirect(url_for('promotions.index'))
 
+@promotions.route('/<int:promo_id>/toggle', methods=['POST'])
+@admin_required
+def toggle(promo_id):
+    """Enable or disable a promotion."""
+    promo = db.session.get(Promotion, promo_id)
+    if not promo:
+        abort(404)
+    promo.is_active = not promo.is_active
+    db.session.commit()
+    flash(f'Promotion {"enabled" if promo.is_active else "disabled"}', 'success')
+    return redirect(url_for('promotions.index'))
 
-# ── Tester ────────────────────────────────────────────────────────
-
-@promotions.route('/tester')
+@promotions.route('/tester', methods=['GET'])
 @admin_required
 def tester():
+    """Interactive tool to test promotion logic."""
     products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-    return render_template('promotions/tester.html', title='Promo Tester',
-                           products=products, promo_result=None)
-
+    return render_template('promotions/tester.html', title='Promotion Tester', products=products)
 
 @promotions.route('/tester/preview', methods=['POST'])
 @admin_required
 def tester_preview():
-    """
-    HTMX endpoint: receives a sample cart as form data,
-    evaluates all active promotions, and returns an HTML partial.
-    """
-    # Build a mock cart from form inputs
-    # Form fields: product_id[] and qty[]
-    product_ids = request.form.getlist('product_id[]')
-    quantities  = request.form.getlist('qty[]')
-
+    """HTMX endpoint for promotion tester."""
+    cart_data = request.form.getlist('product_id[]')
+    quantities = request.form.getlist('quantity[]')
+    
     mock_cart = {}
-    for pid_s, qty_s in zip(product_ids, quantities):
+    for pid_s, qty_s in zip(cart_data, quantities):
         try:
             pid = int(pid_s)
             qty = int(qty_s)
@@ -191,6 +162,7 @@ def tester_preview():
         if not product:
             continue
         mock_cart[str(pid)] = {
+            'product_id':  pid,
             'name':        product.name,
             'price':       str(product.price),
             'quantity':    qty,
@@ -200,17 +172,12 @@ def tester_preview():
     active_promos = Promotion.query.filter_by(is_active=True).all()
     promo_result  = evaluate_promotions(mock_cart, active_promos)
 
-    return render_template('promotions/_preview.html',
-                           mock_cart=mock_cart, promo_result=promo_result)
+    return render_template('promotions/_preview.html', 
+                         mock_cart=mock_cart, promo_result=promo_result)
 
-
-# ── API: active promotions (used by billing cart route) ──────────
 
 def get_active_promotions():
-    """Return all currently date-valid active promotions. Used by billing."""
-    today = date.today()
-    return Promotion.query.filter(
-        Promotion.is_active == True,
-        db.or_(Promotion.start_date.is_(None), Promotion.start_date <= today),
-        db.or_(Promotion.end_date.is_(None),   Promotion.end_date   >= today),
-    ).all()
+    """Return a list of all currently active and valid promotions."""
+    all_active = Promotion.query.filter_by(is_active=True).all()
+    # Filter by date ranges and usage limits in Python for simplicity
+    return [p for p in all_active if p.is_valid_today]

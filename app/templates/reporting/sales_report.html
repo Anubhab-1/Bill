@@ -72,7 +72,7 @@
                 <td class="px-6 py-3 font-mono text-brand-400">{{ sale.invoice_number }}</td>
                 <td class="px-6 py-3 text-right text-gray-400">{{ sale.items|length }}</td>
                 <td class="px-6 py-3 text-right text-gray-400">₹{{ "{:.2f}".format(sale.gst_total) }}</td>
-                <td class="px-6 py-3 text-right font-medium text-white">₹{{ "{:.2f}".format(sale.total_amount) }}</td>
+                <td class="px-6 py-3 text-right font-medium text-white">₹{{ "{:.2f}".format(sale.computed_grand_total) }}</td>
                 <td class="px-6 py-3 text-center">
                     <a href="{{ url_for('billing.invoice', sale_id=sale.id) }}" target="_blank"
                         class="text-xs text-brand-400 hover:text-brand-300 hover:underline">View</a>

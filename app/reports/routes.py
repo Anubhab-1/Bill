@@ -104,8 +104,14 @@ def index():
     # func.coalesce prevents NULL when there are no matching rows.
     agg_q = db.session.query(
         func.count(Sale.id).label('total_count'),
-        func.coalesce(func.sum(Sale.total_amount + Sale.gst_total), 0).label('grand_sum'),
-        func.coalesce(func.avg(Sale.total_amount + Sale.gst_total), 0).label('avg_bill'),
+        func.coalesce(
+            func.sum(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total)),
+            0,
+        ).label('grand_sum'),
+        func.coalesce(
+            func.avg(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total)),
+            0,
+        ).label('avg_bill'),
     )
     agg_q, _, _, _ = _apply_filters(agg_q, start_str, end_str, cashier_id_str)
     agg = agg_q.first()
@@ -189,8 +195,14 @@ def cashier_summary():
         User.id.label('cashier_id'),
         User.name.label('cashier_name'),
         func.count(Sale.id).label('tx_count'),
-        func.coalesce(func.sum(Sale.total_amount + Sale.gst_total), 0).label('total_handled'),
-        func.coalesce(func.avg(Sale.total_amount + Sale.gst_total), 0).label('avg_bill'),
+        func.coalesce(
+            func.sum(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total)),
+            0,
+        ).label('total_handled'),
+        func.coalesce(
+            func.avg(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total)),
+            0,
+        ).label('avg_bill'),
     ).join(Sale, Sale.cashier_id == User.id)
 
     # Date filter on the joined query
@@ -284,7 +296,7 @@ def export_csv():
             sale.cashier.name,
             f'{sale.total_amount:.2f}',
             f'{sale.gst_total:.2f}',
-            f'{sale.grand_total:.2f}',
+            f'{sale.computed_grand_total:.2f}',
         ])
 
     # ── Build filename with date range ────────────────────────────

@@ -26,6 +26,10 @@ PROMO_TYPE_CHOICES = [p[0] for p in PROMO_TYPES]
 class Promotion(db.Model):
     """A configurable discount rule."""
     __tablename__ = 'promotions'
+    __table_args__ = (
+        db.CheckConstraint('current_uses >= 0', name='check_promotion_current_uses_non_negative'),
+        db.CheckConstraint('max_uses IS NULL OR max_uses > 0', name='check_promotion_max_uses_positive'),
+    )
 
     id           = db.Column(db.Integer, primary_key=True)
     name         = db.Column(db.String(200), nullable=False)
@@ -86,6 +90,9 @@ class AppliedPromotion(db.Model):
     even if the Promotion row is later deleted or renamed.
     """
     __tablename__ = 'applied_promotions'
+    __table_args__ = (
+        db.CheckConstraint('discount_amount >= 0', name='check_applied_promotion_discount_non_negative'),
+    )
 
     id              = db.Column(db.Integer, primary_key=True)
     sale_id         = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False, index=True)

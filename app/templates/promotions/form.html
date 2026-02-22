@@ -14,8 +14,9 @@
 
 <div class="max-w-2xl">
     <form method="POST" class="space-y-5">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        {{-- Name --}}
+        {# Name #}
         <div>
             <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                 Promotion Name <span class="text-red-400">*</span>
@@ -25,14 +26,14 @@
                     focus:outline-none focus:border-brand-500 transition-colors">
         </div>
 
-        {{-- Type --}}
+        {# Type #}
         <div>
             <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                 Promotion Type <span class="text-red-400">*</span>
             </label>
             <select name="promo_type" id="promo_type" required class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-3 py-2.5 text-sm
                      focus:outline-none focus:border-brand-500 transition-colors">
-                {% for value, label in promo_types %}
+                {% for value, label in promo_types_list %}
                 <option value="{{ value }}" {{ 'selected' if promo and promo.promo_type==value }}>
                     {{ label }}
                 </option>
@@ -40,11 +41,11 @@
             </select>
         </div>
 
-        {{-- Dynamic Params by type --}}
+        {# Dynamic Params by type #}
         <div id="params-section" class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
             <p class="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">Promotion Parameters</p>
 
-            {{-- percentage_item & fixed_item share product list --}}
+            {# percentage_item & fixed_item share product list #}
             <div id="param-product_ids" class="space-y-1.5">
                 <label class="block text-xs text-gray-400">Product IDs (comma-separated)
                     <span class="text-gray-600 ml-1">e.g. 1, 5, 12</span>
@@ -107,7 +108,7 @@
             </div>
         </div>
 
-        {{-- Date range --}}
+        {# Date range #}
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Start Date
@@ -125,7 +126,7 @@
             </div>
         </div>
 
-        {{-- Max uses --}}
+        {# Max uses #}
         <div>
             <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                 Max Uses <span class="text-gray-600">(blank = unlimited)</span>
@@ -136,7 +137,7 @@
                     focus:outline-none focus:border-brand-500">
         </div>
 
-        {{-- Checkboxes --}}
+        {# Checkboxes #}
         <div class="flex items-center gap-8">
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name="is_active" value="1" {{ 'checked' if (promo is none or promo.is_active) }}
@@ -151,7 +152,7 @@
             </label>
         </div>
 
-        {{-- Actions --}}
+        {# Actions #}
         <div class="flex items-center gap-3 pt-2">
             <button type="submit"
                 class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">

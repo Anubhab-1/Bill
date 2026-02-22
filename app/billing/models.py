@@ -1,194 +1,176 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
+
 from app import db
 
 
 class InvoiceSequence(db.Model):
-    """
-    One row per calendar year — holds the last-used invoice sequence number.
-
-    Why a dedicated table instead of COUNT(sales)?
-    ─────────────────────────────────────────────
-    COUNT(sales) inside a transaction is NOT safe under concurrent writes:
-
-        Tx A: COUNT = 15  →  next = 16   ┐
-        Tx B: COUNT = 15  →  next = 16   ┘  ← both generate 2026-0016
-
-    One of them will crash on the UNIQUE constraint and roll back the entire
-    sale — a terrible user experience.
-
-    With this table + SELECT FOR UPDATE:
-
-        Tx A: locks row, reads last_seq=15, writes 16, commits  ┐ serialised
-        Tx B: blocks until Tx A commits, reads last_seq=16, writes 17 ┘
-
-    No collision. No rollback. No lost sale.
-    """
     __tablename__ = 'invoice_sequences'
 
-    year     = db.Column(db.Integer, primary_key=True)   # e.g. 2026
+    year = db.Column(db.Integer, primary_key=True)
     last_seq = db.Column(db.Integer, nullable=False, default=0)
 
     def __repr__(self):
         return f"<InvoiceSequence year={self.year} last_seq={self.last_seq}>"
 
 
-
-
 class Sale(db.Model):
-    """
-    Represents one completed billing transaction (one invoice).
-    A Sale has many SaleItems.
-    """
     __tablename__ = 'sales'
+    __table_args__ = (
+        db.CheckConstraint('total_amount >= 0', name='check_sale_total_amount_non_negative'),
+        db.CheckConstraint('gst_total >= 0', name='check_sale_gst_total_non_negative'),
+        db.CheckConstraint('discount_amount >= 0', name='check_sale_discount_amount_non_negative'),
+        db.CheckConstraint('discount_percent >= 0 AND discount_percent <= 100', name='check_sale_discount_percent_range'),
+        db.CheckConstraint('grand_total IS NULL OR grand_total >= 0', name='check_sale_grand_total_non_negative'),
+    )
 
-    id             = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     invoice_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
-    cashier_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    customer_id    = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
-    total_amount   = db.Column(db.Numeric(12, 2), nullable=False)  # sum of subtotals (excl. GST)
-    gst_total      = db.Column(db.Numeric(12, 2), nullable=False)  # sum of GST amounts
-    grand_total    = db.Column(db.Numeric(10, 2))  # cached total + gst
+    cashier_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    total_amount = db.Column(db.Numeric(12, 2), nullable=False)
+    discount_percent = db.Column(db.Numeric(5, 2), nullable=False, default=0)
+    discount_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    gst_total = db.Column(db.Numeric(12, 2), nullable=False)
+    grand_total = db.Column(db.Numeric(10, 2))
     payment_method = db.Column(db.String(20), nullable=False, default='cash')
-    # Printing / Reconciliation
-    print_html     = db.Column(db.Text)            # stored invoice snapshot
-    is_printed     = db.Column(db.Boolean, default=False)
-    created_at     = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    print_html = db.Column(db.Text)
+    is_printed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
-    # ── Relationships ─────────────────────────────────────────────
-    cashier  = db.relationship('User',     backref='sales', lazy='select')
+    cashier = db.relationship('User', backref='sales', lazy='select')
     customer = db.relationship('Customer', backref='sales', lazy='select')
-    items    = db.relationship('SaleItem', backref='sale',  lazy='select',
-                               cascade='all, delete-orphan')
+    items = db.relationship(
+        'SaleItem',
+        backref='sale',
+        lazy='select',
+        cascade='all, delete-orphan',
+    )
 
-    # ── Computed helpers ──────────────────────────────────────────
     @property
-    def grand_total(self) -> Decimal:
-        """total_amount + gst_total, as Decimal."""
-        return Decimal(str(self.total_amount)) + Decimal(str(self.gst_total))
+    def computed_grand_total(self) -> Decimal:
+        if self.grand_total is not None:
+            return Decimal(str(self.grand_total))
+        return (Decimal(str(self.total_amount)) + Decimal(str(self.gst_total))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def __repr__(self):
-        return f"<Sale {self.invoice_number!r} ₹{self.grand_total}>"
+        return f"<Sale {self.invoice_number!r} {self.computed_grand_total}>"
 
 
 class SaleItem(db.Model):
-    """
-    One line item inside a Sale.
-    Stores a snapshot of price and GST at the time of sale —
-    so future product edits don't alter historical invoices.
-    """
     __tablename__ = 'sale_items'
+    __table_args__ = (
+        db.CheckConstraint('quantity > 0', name='check_sale_item_quantity_positive'),
+        db.CheckConstraint('subtotal >= 0', name='check_sale_item_subtotal_non_negative'),
+    )
 
-    id            = db.Column(db.Integer, primary_key=True)
-    sale_id       = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
-    product_id    = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    quantity      = db.Column(db.Integer, nullable=False)
-    price_at_sale = db.Column(db.Numeric(10, 2), nullable=False)  # base price snapshot
-    gst_percent   = db.Column(db.Integer, nullable=False)
-    subtotal      = db.Column(db.Numeric(12, 2), nullable=False)  # qty × price_at_sale
-    # Weighed items
-    weight_kg     = db.Column(db.Numeric(8, 3), nullable=True)    # e.g. 0.850 kg
-    unit_label    = db.Column(db.String(10), nullable=True)       # 'kg' or None
+    id = db.Column(db.Integer, primary_key=True)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=False, index=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price_at_sale = db.Column(db.Numeric(10, 2), nullable=False)
+    snapshot_size = db.Column(db.String(10), nullable=False)
+    snapshot_color = db.Column(db.String(50), nullable=False)
+    gst_percent = db.Column(db.Integer, nullable=False)
+    subtotal = db.Column(db.Numeric(12, 2), nullable=False)
+    weight_kg = db.Column(db.Numeric(8, 3), nullable=True)
+    unit_label = db.Column(db.String(10), nullable=True)
 
-    # ── Relationship ──────────────────────────────────────────────
-    product = db.relationship('Product', lazy='select')
+    variant = db.relationship('ProductVariant', lazy='select')
 
-    # ── Computed helpers ──────────────────────────────────────────
+    @property
+    def product(self):
+        # Compatibility helper used by templates/routes that expect item.product.
+        return self.variant.product if self.variant else None
+
     @property
     def gst_amount(self) -> Decimal:
-        """GST rupee amount for this line item."""
-        return (Decimal(str(self.subtotal)) *
-                Decimal(str(self.gst_percent)) / Decimal('100')).quantize(Decimal('0.01'))
+        return (
+            Decimal(str(self.subtotal)) * Decimal(str(self.gst_percent)) / Decimal('100')
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     @property
     def subtotal_with_gst(self) -> Decimal:
-        """subtotal + gst_amount for this line."""
         return Decimal(str(self.subtotal)) + self.gst_amount
 
     def __repr__(self):
-        return f"<SaleItem sale={self.sale_id} product={self.product_id} qty={self.quantity}>"
+        return f"<SaleItem sale={self.sale_id} variant={self.variant_id} qty={self.quantity}>"
 
 
 class Return(db.Model):
-    """
-    Represents a processed return/refund transaction.
-    """
     __tablename__ = 'returns'
+    __table_args__ = (
+        db.CheckConstraint('total_refunded >= 0', name='check_return_total_refunded_non_negative'),
+    )
 
-    id             = db.Column(db.Integer, primary_key=True)
-    sale_id        = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
-    processed_by   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    refund_method  = db.Column(db.String(20), nullable=False)  # cash/card
+    id = db.Column(db.Integer, primary_key=True)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
+    processed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    refund_method = db.Column(db.String(20), nullable=False)
     total_refunded = db.Column(db.Numeric(12, 2), nullable=False)
-    note           = db.Column(db.Text)
-    created_at     = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    # ── Relationships ─────────────────────────────────────────────
-    sale    = db.relationship('Sale',    backref='returns', lazy='select')
-    cashier = db.relationship('User',    lazy='select')
-    items   = db.relationship('ReturnItem', backref='return_obj', lazy='select',
-                              cascade='all, delete-orphan')
+    sale = db.relationship('Sale', backref='returns', lazy='select')
+    cashier = db.relationship('User', lazy='select')
+    items = db.relationship(
+        'ReturnItem',
+        backref='return_obj',
+        lazy='select',
+        cascade='all, delete-orphan',
+    )
 
 
 class ReturnItem(db.Model):
-    """
-    Line item for a return.
-    Links back to the original SaleItem to validate quantity limits.
-    """
     __tablename__ = 'return_items'
+    __table_args__ = (
+        db.CheckConstraint('quantity > 0', name='check_return_item_quantity_positive'),
+        db.CheckConstraint('refund_amount >= 0', name='check_return_item_refund_amount_non_negative'),
+    )
 
-    id            = db.Column(db.Integer, primary_key=True)
-    return_id     = db.Column(db.Integer, db.ForeignKey('returns.id'), nullable=False)
-    sale_item_id  = db.Column(db.Integer, db.ForeignKey('sale_items.id'), nullable=False)
-    product_id    = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    quantity      = db.Column(db.Integer, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    return_id = db.Column(db.Integer, db.ForeignKey('returns.id'), nullable=False)
+    sale_item_id = db.Column(db.Integer, db.ForeignKey('sale_items.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
     refund_amount = db.Column(db.Numeric(12, 2), nullable=False)
-    reason        = db.Column(db.String(100))
+    reason = db.Column(db.String(100))
 
-    # ── Relationships ─────────────────────────────────────────────
-    product   = db.relationship('Product', lazy='select')
-    sale_item = db.relationship('SaleItem', backref='return_items', lazy='select')
-
-
-
+    product = db.relationship('Product', lazy='select')
     sale_item = db.relationship('SaleItem', backref='return_items', lazy='select')
 
 
 class SalePayment(db.Model):
-    """
-    Tracks individual payments for a sale (allowing split tender).
-    """
     __tablename__ = 'sale_payments'
+    __table_args__ = (
+        db.CheckConstraint('amount >= 0', name='check_sale_payment_amount_non_negative'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
-    payment_method = db.Column(db.String(20), nullable=False) # cash/card/upi
+    payment_method = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Numeric(12, 2), nullable=False)
-    reference = db.Column(db.String(100)) # txn id, optional
+    reference = db.Column(db.String(100))
 
-    # ── Relationships ─────────────────────────────────────────────
     sale = db.relationship('Sale', backref='payments', lazy='select')
 
 
 class CashSession(db.Model):
-    """
-    Tracks a cashier's shift/session — opening balance vs closing total.
-    """
     __tablename__ = 'cash_sessions'
+    __table_args__ = (
+        db.CheckConstraint('opening_cash >= 0', name='check_cash_session_opening_non_negative'),
+        db.CheckConstraint('system_total >= 0', name='check_cash_session_system_total_non_negative'),
+        db.CheckConstraint('closing_cash IS NULL OR closing_cash >= 0', name='check_cash_session_closing_non_negative'),
+    )
 
-    id           = db.Column(db.Integer, primary_key=True)
-    cashier_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    cashier_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     opening_cash = db.Column(db.Numeric(10, 2), nullable=False)
-    
-    # Running total of all sales in this session (incremented on billing complete)
     system_total = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
-    
     closing_cash = db.Column(db.Numeric(10, 2), nullable=True)
-    start_time   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    end_time     = db.Column(db.DateTime, nullable=True)
+    start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime, nullable=True)
 
-    # ── Relationships ─────────────────────────────────────────────
-    # user backref serves as access to cashier details
     cashier = db.relationship('User', backref=db.backref('sessions', lazy='dynamic'))
 
     @property
@@ -197,7 +179,6 @@ class CashSession(db.Model):
 
     @property
     def discrepancy(self):
-        """Difference between (opening + sales) and closing cash."""
         if self.closing_cash is None:
             return None
         expected = Decimal(str(self.opening_cash)) + Decimal(str(self.system_total))

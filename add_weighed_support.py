@@ -14,7 +14,8 @@ app = create_app()
 
 with app.app_context():
     inspector = sa_inspect(db.engine)
-    is_pg = db.engine.dialect.name == 'postgresql'
+    if db.engine.dialect.name != 'postgresql':
+        raise RuntimeError('This migration requires PostgreSQL.')
 
     with db.engine.connect() as conn:
 

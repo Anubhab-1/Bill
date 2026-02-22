@@ -12,13 +12,13 @@ from flask import (
     render_template, request, Response, stream_with_context,
     current_app, url_for
 )
-from sqlalchemy import func, case, desc
+from sqlalchemy import func, case, desc, Date, cast
 
 from app.reporting import reporting
 from app.auth.decorators import admin_required
 from app import db
 from app.billing.models import Sale, SaleItem, SalePayment
-from app.inventory.models import Product, ProductBatch
+from app.inventory.models import Product, ProductBatch, ProductVariant
 from app.purchasing.models import PurchaseOrder, PurchaseOrderItem, POStatus
 
 
@@ -44,6 +44,17 @@ def _get_date_range():
     return start_date, end_date
 
 
+def _get_datetime_bounds():
+    """
+    Build an index-friendly datetime range:
+      created_at >= start_dt AND created_at < end_dt_exclusive
+    """
+    start_date, end_date = _get_date_range()
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt_exclusive = datetime.combine(end_date + timedelta(days=1), datetime.min.time())
+    return start_date, end_date, start_dt, end_dt_exclusive
+
+
 # ── Dashboard ─────────────────────────────────────────────────────
 
 @reporting.route('/')
@@ -52,16 +63,20 @@ def index():
     today = date.today()
     
     # 1. Today's Sales
-    today_sales_total = db.session.query(func.sum(Sale.total_amount))\
-        .filter(func.date(Sale.created_at) == today).scalar() or Decimal('0')
+    today_sales_total = db.session.query(
+        func.sum(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total))
+    )\
+        .filter(cast(Sale.created_at, Date) == today).scalar() or Decimal('0')
     
     today_sales_count = db.session.query(func.count(Sale.id))\
-        .filter(func.date(Sale.created_at) == today).scalar() or 0
+        .filter(cast(Sale.created_at, Date) == today).scalar() or 0
 
     # 2. This Month's Sales
     month_start = today.replace(day=1)
-    month_sales_total = db.session.query(func.sum(Sale.total_amount))\
-        .filter(func.date(Sale.created_at) >= month_start).scalar() or Decimal('0')
+    month_sales_total = db.session.query(
+        func.sum(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total))
+    )\
+        .filter(cast(Sale.created_at, Date) >= month_start).scalar() or Decimal('0')
 
     # 3. Inventory Value (Cost vs Selling)
     # Estimate cost using weighted average if available, else 0 (simplified)
@@ -95,12 +110,12 @@ def sales_report():
     # Query sales in range
     # Join with User to show cashier name? Not strictly needed if just IDs
     sales = Sale.query.filter(
-        func.date(Sale.created_at) >= start_date,
-        func.date(Sale.created_at) <= end_date
+        cast(Sale.created_at, Date) >= start_date,
+        cast(Sale.created_at, Date) <= end_date
     ).order_by(Sale.created_at.desc()).all()
 
     # Summaries
-    total_revenue = sum(s.total_amount for s in sales)
+    total_revenue = sum(s.computed_grand_total for s in sales)
     total_gst     = sum(s.gst_total for s in sales)
     
     # Payment mode breakdown (approximate if mixed payments, 
@@ -109,8 +124,8 @@ def sales_report():
     payment_stats = db.session.query(
         SalePayment.payment_method, func.sum(SalePayment.amount)
     ).join(Sale).filter(
-        func.date(Sale.created_at) >= start_date,
-        func.date(Sale.created_at) <= end_date
+        cast(Sale.created_at, Date) >= start_date,
+        cast(Sale.created_at, Date) <= end_date
     ).group_by(SalePayment.payment_method).all()
     
     payment_summary = {mode: amt for mode, amt in payment_stats}
@@ -122,6 +137,108 @@ def sales_report():
                            total_revenue=total_revenue,
                            total_gst=total_gst,
                            payment_summary=payment_summary)
+
+
+@reporting.route('/apparel')
+@admin_required
+def apparel_report():
+    """
+    Apparel analytics:
+      1) Top selling sizes
+      2) Top selling colors
+      3) Sales by brand
+      4) Sales by category
+    All metrics are computed in SQL aggregation queries.
+    """
+    start_date, end_date, start_dt, end_dt_exclusive = _get_datetime_bounds()
+
+    gross_sales_expr = SaleItem.subtotal + ((SaleItem.subtotal * SaleItem.gst_percent) / 100)
+    brand_label = func.coalesce(func.nullif(Product.brand, ''), 'Unbranded')
+    category_label = func.coalesce(func.nullif(Product.category, ''), 'Uncategorized')
+
+    top_sizes = (
+        db.session.query(
+            SaleItem.snapshot_size.label('size'),
+            func.sum(SaleItem.quantity).label('units_sold'),
+            func.sum(gross_sales_expr).label('gross_sales'),
+        )
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(
+            Sale.created_at >= start_dt,
+            Sale.created_at < end_dt_exclusive,
+            SaleItem.snapshot_size.isnot(None),
+            SaleItem.snapshot_size != '',
+        )
+        .group_by(SaleItem.snapshot_size)
+        .order_by(desc('units_sold'), desc('gross_sales'))
+        .limit(10)
+        .all()
+    )
+
+    top_colors = (
+        db.session.query(
+            SaleItem.snapshot_color.label('color'),
+            func.sum(SaleItem.quantity).label('units_sold'),
+            func.sum(gross_sales_expr).label('gross_sales'),
+        )
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(
+            Sale.created_at >= start_dt,
+            Sale.created_at < end_dt_exclusive,
+            SaleItem.snapshot_color.isnot(None),
+            SaleItem.snapshot_color != '',
+        )
+        .group_by(SaleItem.snapshot_color)
+        .order_by(desc('units_sold'), desc('gross_sales'))
+        .limit(10)
+        .all()
+    )
+
+    sales_by_brand = (
+        db.session.query(
+            brand_label.label('brand'),
+            func.sum(SaleItem.quantity).label('units_sold'),
+            func.sum(gross_sales_expr).label('gross_sales'),
+        )
+        .join(ProductVariant, ProductVariant.id == SaleItem.variant_id)
+        .join(Product, Product.id == ProductVariant.product_id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(
+            Sale.created_at >= start_dt,
+            Sale.created_at < end_dt_exclusive,
+        )
+        .group_by(brand_label)
+        .order_by(desc('gross_sales'))
+        .all()
+    )
+
+    sales_by_category = (
+        db.session.query(
+            category_label.label('category'),
+            func.sum(SaleItem.quantity).label('units_sold'),
+            func.sum(gross_sales_expr).label('gross_sales'),
+        )
+        .join(ProductVariant, ProductVariant.id == SaleItem.variant_id)
+        .join(Product, Product.id == ProductVariant.product_id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(
+            Sale.created_at >= start_dt,
+            Sale.created_at < end_dt_exclusive,
+        )
+        .group_by(category_label)
+        .order_by(desc('gross_sales'))
+        .all()
+    )
+
+    return render_template(
+        'reporting/apparel_report.html',
+        start_date=start_date,
+        end_date=end_date,
+        top_sizes=top_sizes,
+        top_colors=top_colors,
+        sales_by_brand=sales_by_brand,
+        sales_by_category=sales_by_category,
+    )
 
 
 # ── GST Report ────────────────────────────────────────────────────
@@ -139,14 +256,13 @@ def gst_report():
     # PRO-TIP: Real systems snapshot tax rates. We'll use Product.gst_percent for now.
     
     output_tax_data = db.session.query(
-        Product.gst_percent,
+        SaleItem.gst_percent,
         func.sum(SaleItem.subtotal)
-    ).join(Product, SaleItem.product_id == Product.id)\
-     .join(Sale, SaleItem.sale_id == Sale.id)\
+    ).join(Sale, SaleItem.sale_id == Sale.id)\
      .filter(
-         func.date(Sale.created_at) >= start_date,
-         func.date(Sale.created_at) <= end_date
-     ).group_by(Product.gst_percent).all()
+         cast(Sale.created_at, Date) >= start_date,
+         cast(Sale.created_at, Date) <= end_date
+     ).group_by(SaleItem.gst_percent).all()
 
     # Calc tax amounts
     gst_summary = []
@@ -155,7 +271,7 @@ def gst_report():
 
     for gst_pct, taxable_val in output_tax_data:
         if not taxable_val: continue
-        tax_amt = (taxable_val * gst_pct / 100).quantize(Decimal('0.01'))
+        tax_amt = (taxable_val * gst_pct / 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         gst_summary.append({
             'rate': gst_pct,
             'taxable': taxable_val,
@@ -174,8 +290,8 @@ def gst_report():
      .filter(
          PurchaseOrder.status == POStatus.RECEIVED,
          # Filter by expected_date or updated_at? Let's use updated_at as proxy for receipt
-         func.date(PurchaseOrder.updated_at) >= start_date,
-         func.date(PurchaseOrder.updated_at) <= end_date
+         cast(PurchaseOrder.updated_at, Date) >= start_date,
+         cast(PurchaseOrder.updated_at, Date) <= end_date
      ).group_by(Product.gst_percent).all()
 
     input_summary = []
@@ -185,7 +301,7 @@ def gst_report():
         if not purch_val: continue
         # PurchaseOrderItem.unit_cost is typically ex-tax? Or user entered incl-tax?
         # Let's assume ex-tax for calculation
-        tax_amt = (purch_val * gst_pct / 100).quantize(Decimal('0.01'))
+        tax_amt = (purch_val * gst_pct / 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         input_summary.append({
             'rate': gst_pct,
             'purchase_val': purch_val,
@@ -252,8 +368,8 @@ def export_csv(report_type):
             data.truncate(0)
 
             sales = Sale.query.filter(
-                func.date(Sale.created_at) >= start_date,
-                func.date(Sale.created_at) <= end_date
+                cast(Sale.created_at, Date) >= start_date,
+                cast(Sale.created_at, Date) <= end_date
             ).order_by(Sale.created_at.desc()).all()
 
             for s in sales:
@@ -262,7 +378,7 @@ def export_csv(report_type):
                     s.created_at.strftime('%Y-%m-%d %H:%M'),
                     s.invoice_number,
                     s.cashier_id,
-                    s.total_amount,
+                    s.computed_grand_total,
                     s.gst_total,
                     item_count
                 ])

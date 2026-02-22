@@ -10,7 +10,7 @@ from decimal import Decimal
 from datetime import date, timedelta
 
 from app import create_app, db
-from app.inventory.models import Product, ProductBatch, InventoryLog
+from app.inventory.models import Product, ProductVariant, ProductBatch, InventoryLog
 from app.billing.models import Sale
 from app.auth.models import User, RoleEnum
 from app.purchasing.models import (
@@ -22,10 +22,10 @@ from app.purchasing.models import (
 # ── Fixtures ──────────────────────────────────────────────────────
 
 @pytest.fixture(scope='function')
-def client():
-    app = create_app('testing')
+def client(app):
+    """Uses the global app fixture and seeds admin user."""
     with app.app_context():
-        db.create_all()
+        # setup_database (from conftest) already ran db.create_all()
 
         # Admin user
         admin = User(username='admin', name='Admin', role=RoleEnum.admin)
@@ -33,8 +33,8 @@ def client():
         db.session.add(admin)
         db.session.commit()
 
-        yield app.test_client()
-        db.drop_all()
+        with app.test_client() as client:
+            yield client
 
 
 def login(client):
@@ -53,13 +53,23 @@ def make_supplier(name='Metro Wholesale'):
 def make_product(name='Basmati Rice', stock=10):
     p = Product(
         name=name,
-        barcode=f'BC_{name[:5].upper()}',
-        price=Decimal('100.00'),
-        stock=stock,
+        barcode=f'LEGACY-{name[:5].upper()}',
         gst_percent=5,
         is_active=True,
     )
     db.session.add(p)
+    db.session.flush()
+
+    v = ProductVariant(
+        product_id=p.id,
+        size='Standard',
+        color='White',
+        barcode=f'BC_{name[:5].upper()}_{p.id}',
+        price=Decimal('100.00'),
+        stock=stock,
+        is_active=True
+    )
+    db.session.add(v)
     db.session.commit()
     return p
 
@@ -223,7 +233,7 @@ def test_grn_increases_stock(client):
                .order_by(InventoryLog.id.desc())
                .first())
         assert log is not None
-        assert 'GRN' in log.reason
+        assert log.reason == 'PO_RECEIVE'
         assert log.old_stock == 5
         assert log.new_stock == 15
 

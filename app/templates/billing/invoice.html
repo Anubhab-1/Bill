@@ -167,13 +167,14 @@
                 <tr class="border-b border-gray-100">
                     <td class="py-4 pr-4">
                         <p class="font-semibold text-gray-900">
-                            {{ item.product.name }}
+                            {{ item.variant.product.name if item.variant else item.product.name }}
                             {% if item.weight_kg %}
                             <span class="text-xs font-normal text-gray-500 ml-1">({{ "{:.3f}".format(item.weight_kg) }}
                                 kg)</span>
                             {% endif %}
                         </p>
-                        <p class="text-xs text-gray-500 font-mono mt-0.5">{{ item.product.barcode }}</p>
+                        <p class="text-xs text-gray-500 font-mono mt-0.5">{{ item.variant.barcode if item.variant else item.product.barcode }}</p>
+                        <p class="text-xs text-gray-500">{{ item.snapshot_size }} / {{ item.snapshot_color }}</p>
                     </td>
                     <td class="py-4 text-center text-gray-600 font-medium">
                         {{ item.quantity if not item.weight_kg else '-' }}
@@ -252,3 +253,4 @@
 </body>
 
 </html>
+

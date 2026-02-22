@@ -11,29 +11,29 @@ from sqlalchemy import func, cast, Date, desc
 
 from app import db
 from app.main import main
-from app.auth.decorators import login_required
+from app.auth.decorators import login_required, admin_required
 
-@main.route("/fix-db-schema-now")
+@main.route("/fix-db-schema-now", methods=["POST"])
+@admin_required
 def fix_db_schema_now():
-    """Emergency route to manually trigger DB migration."""
+    """Admin-only emergency schema patch route (disabled by default)."""
+    from flask import current_app, abort
     from app.migration import run_auto_migration
-    from flask import current_app
-    
+
+    if not current_app.config.get('ALLOW_SCHEMA_FIX_ROUTE', False):
+        abort(404)
+
     try:
         run_auto_migration(current_app._get_current_object())
-        return "✅ Migration triggered. Check logs. If no errors, DB is fixed.", 200
+        return "Schema patch triggered. Check logs for details.", 200
     except Exception as e:
-        return f"❌ Migration failed: {str(e)}", 500
+        return f"Migration failed: {str(e)}", 500
 
-@main.route("/admin/seed-history-now")
-@login_required
+
+@main.route("/admin/seed-history-now", methods=["POST"])
+@admin_required
 def seed_history_now():
     """Manually trigger historical data seeding."""
-    # Ensure only admin can run this
-    from flask_login import current_user
-    if current_user.role.value != 'admin':
-         return "Unauthorized", 403
-
     from click import Context
     from app.seed_history import seed_history
     try:
@@ -55,7 +55,9 @@ def health():
 
     status = "ok"
     failures = []
-    
+    free_gb = None
+    percent_free = None
+
     # 1. DB Check
     try:
         from sqlalchemy import text
@@ -90,7 +92,7 @@ def health():
         "details": {
             "db": "ok" if not any("DB" in f for f in failures) else "error",
             "disk_free_gb": free_gb,
-            "disk_free_percent": round(percent_free, 1)
+            "disk_free_percent": round(percent_free, 1) if percent_free is not None else None
         }
     }
     
@@ -103,7 +105,8 @@ def health():
         
         # Color logic
         db_color = "green" if response["details"]["db"] == "ok" else "red"
-        disk_color = "green" if response["details"]["disk_free_percent"] > 20 else ("yellow" if response["details"]["disk_free_percent"] > 10 else "red")
+        disk_pct = response["details"]["disk_free_percent"] if response["details"]["disk_free_percent"] is not None else 0
+        disk_color = "green" if disk_pct > 20 else ("yellow" if disk_pct > 10 else "red")
         
         html = f"""
         <div class="flex items-center justify-between py-2.5 border-b border-gray-800">
@@ -148,8 +151,8 @@ def _send_alert_email(subject, body):
 @login_required
 def index():
     """Homepage — Mall Billing System dashboard."""
-    from app.inventory.models import Product, LOW_STOCK_THRESHOLD, ProductBatch
-    from app.billing.models import Sale, SaleItem
+    from app.inventory.models import Product, ProductVariant, LOW_STOCK_THRESHOLD, ProductBatch
+    from app.billing.models import Sale, SaleItem, Return
     from datetime import timedelta
 
     today = date.today()
@@ -182,7 +185,9 @@ def index():
         func.sum(SaleItem.quantity).label('qty_sold'),
         func.sum(SaleItem.subtotal).label('revenue'),
     ).join(
-        SaleItem, SaleItem.product_id == Product.id
+        ProductVariant, ProductVariant.product_id == Product.id
+    ).join(
+        SaleItem, SaleItem.variant_id == ProductVariant.id
     ).join(
         Sale, Sale.id == SaleItem.sale_id
     ).filter(
@@ -197,7 +202,7 @@ def index():
         {
             'name':    r.name,
             'qty':     r.qty_sold,
-            'revenue': Decimal(str(r.revenue or 0)),
+            'revenue': Decimal(r.revenue or 0),
         }
         for r in top_products
     ]
@@ -249,6 +254,11 @@ def index():
         pending_pos = []
         pending_po_count = 0
 
+    # ── Recent Returns ────────────────────────────────────────────
+    recent_returns = (
+        Return.query.order_by(Return.created_at.desc()).limit(5).all()
+    )
+
     return render_template(
         'main/index.html',
         title='Dashboard',
@@ -268,4 +278,6 @@ def index():
         # Purchasing
         pending_pos=pending_pos,
         pending_po_count=pending_po_count,
+        # Returns
+        recent_returns=recent_returns,
     )

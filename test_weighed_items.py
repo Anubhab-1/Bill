@@ -10,23 +10,23 @@ from decimal import Decimal
 from datetime import date, timedelta
 
 from app import create_app, db
-from app.inventory.models import Product
+from app.inventory.models import Product, ProductVariant
 from app.billing.models import Sale, SaleItem, CashSession
 from app.billing.cart import add_weighed_to_cart, get_cart, clear_cart
 from app.auth.models import User, RoleEnum
 
 
 @pytest.fixture(scope='function')
-def client():
-    app = create_app('testing')
+def client(app):
+    """Uses the global app fixture and seeds admin user."""
     with app.app_context():
-        db.create_all()
+        # setup_database (from conftest) already ran db.create_all()
         user = User(username='admin', name='Admin', role=RoleEnum.admin)
         user.set_password('admin123')
         db.session.add(user)
         db.session.commit()
-        yield app.test_client()
-        db.drop_all()
+        with app.test_client() as client:
+            yield client
 
 
 def login(client):
@@ -46,8 +46,7 @@ def open_cash_session(client):
 def make_weighed_product(app):
     p = Product(
         name='Basmati Rice',
-        barcode='RICE001',
-        price=Decimal('90.00'),      # price_per_kg
+        barcode='LEGACY-RICE001',
         price_per_kg=Decimal('90.00'),
         stock=50,
         gst_percent=5,
@@ -55,6 +54,18 @@ def make_weighed_product(app):
         is_active=True,
     )
     db.session.add(p)
+    db.session.flush()
+    # Create the variant that add_item actually looks for
+    v = ProductVariant(
+        product_id=p.id,
+        size='STD',
+        color='White',
+        barcode='RICE001',
+        price=Decimal('90.00'), # price_per_kg equivalent for variant
+        stock=50,
+        is_active=True
+    )
+    db.session.add(v)
     db.session.commit()
     return p
 
@@ -93,7 +104,9 @@ def test_add_weighed_to_cart(client):
         with client.application.test_request_context():
             from flask import session
             session['cart'] = {}
-            add_weighed_to_cart(product, Decimal('0.500'))
+            # Need to pass the variant, not the product
+            variant = ProductVariant.query.filter_by(product_id=product.id).first()
+            add_weighed_to_cart(variant, Decimal('0.500'))
             cart = get_cart()
 
         assert str(product.id) in cart
@@ -107,8 +120,11 @@ def test_add_weighed_to_cart(client):
 
 def test_product_defaults_not_weighed(client):
     with client.application.app_context():
-        p = Product(name='Candy', barcode='CANDY001', price=10, stock=100, gst_percent=0)
+        p = Product(name='Candy', barcode='LEGACY-CANDY001', price=10, stock=100, gst_percent=0)
         db.session.add(p)
+        db.session.flush()
+        v = ProductVariant(product_id=p.id, size='STD', color='Mixed', barcode='CANDY001', price=10, stock=100)
+        db.session.add(v)
         db.session.commit()
         assert p.is_weighed is False
         assert p.price_per_kg is None
@@ -133,6 +149,7 @@ def test_add_weighed_item_route(client):
 
     resp = client.post('/billing/add-weighed-item', data={
         'product_id': str(pid),
+        'variant_id': str(ProductVariant.query.filter_by(product_id=pid).first().id),
         'weight_kg': '0.750',
     })
     assert resp.status_code == 200
@@ -150,6 +167,7 @@ def test_add_weighed_item_invalid_weight(client):
 
     resp = client.post('/billing/add-weighed-item', data={
         'product_id': str(pid),
+        'variant_id': str(ProductVariant.query.filter_by(product_id=pid).first().id),
         'weight_kg': '0',
     })
     assert resp.status_code == 200
@@ -166,6 +184,7 @@ def test_add_weighed_item_non_numeric(client):
 
     resp = client.post('/billing/add-weighed-item', data={
         'product_id': str(pid),
+        'variant_id': str(ProductVariant.query.filter_by(product_id=pid).first().id),
         'weight_kg': 'abc',
     })
     assert resp.status_code == 200

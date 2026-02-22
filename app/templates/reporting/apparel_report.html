@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block page_title %}Apparel Analytics{% endblock %}
+{% block page_subtitle %}Size, color, brand, and category sales performance{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <form method="GET" class="flex flex-wrap items-end gap-4 bg-gray-900 border border-gray-800 p-4 rounded-xl">
+        <div>
+            <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Start Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}"
+                class="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">End Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}"
+                class="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <button type="submit"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">
+            Filter
+        </button>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800">
+            <h3 class="text-white font-semibold">Top Selling Sizes</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+                <tr>
+                    <th class="px-5 py-3 text-left">Size</th>
+                    <th class="px-5 py-3 text-right">Units</th>
+                    <th class="px-5 py-3 text-right">Gross Sales</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for row in top_sizes %}
+                <tr class="hover:bg-gray-800/50 transition-colors">
+                    <td class="px-5 py-3 text-gray-200">{{ row.size }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ row.units_sold }}</td>
+                    <td class="px-5 py-3 text-right text-white font-medium">Rs {{ "{:,.2f}".format(row.gross_sales or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td class="px-5 py-6 text-gray-500 text-center" colspan="3">No sales in selected range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800">
+            <h3 class="text-white font-semibold">Top Selling Colors</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+                <tr>
+                    <th class="px-5 py-3 text-left">Color</th>
+                    <th class="px-5 py-3 text-right">Units</th>
+                    <th class="px-5 py-3 text-right">Gross Sales</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for row in top_colors %}
+                <tr class="hover:bg-gray-800/50 transition-colors">
+                    <td class="px-5 py-3 text-gray-200">{{ row.color }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ row.units_sold }}</td>
+                    <td class="px-5 py-3 text-right text-white font-medium">Rs {{ "{:,.2f}".format(row.gross_sales or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td class="px-5 py-6 text-gray-500 text-center" colspan="3">No sales in selected range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800">
+            <h3 class="text-white font-semibold">Sales by Brand</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+                <tr>
+                    <th class="px-5 py-3 text-left">Brand</th>
+                    <th class="px-5 py-3 text-right">Units</th>
+                    <th class="px-5 py-3 text-right">Gross Sales</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for row in sales_by_brand %}
+                <tr class="hover:bg-gray-800/50 transition-colors">
+                    <td class="px-5 py-3 text-gray-200">{{ row.brand }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ row.units_sold }}</td>
+                    <td class="px-5 py-3 text-right text-white font-medium">Rs {{ "{:,.2f}".format(row.gross_sales or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td class="px-5 py-6 text-gray-500 text-center" colspan="3">No sales in selected range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-800">
+            <h3 class="text-white font-semibold">Sales by Category</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+                <tr>
+                    <th class="px-5 py-3 text-left">Category</th>
+                    <th class="px-5 py-3 text-right">Units</th>
+                    <th class="px-5 py-3 text-right">Gross Sales</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for row in sales_by_category %}
+                <tr class="hover:bg-gray-800/50 transition-colors">
+                    <td class="px-5 py-3 text-gray-200">{{ row.category }}</td>
+                    <td class="px-5 py-3 text-right text-gray-300">{{ row.units_sold }}</td>
+                    <td class="px-5 py-3 text-right text-white font-medium">Rs {{ "{:,.2f}".format(row.gross_sales or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td class="px-5 py-6 text-gray-500 text-center" colspan="3">No sales in selected range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

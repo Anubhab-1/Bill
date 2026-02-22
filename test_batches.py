@@ -10,22 +10,19 @@ import pytest
 from datetime import date, timedelta
 
 from app import create_app, db
-from app.inventory.models import Product, ProductBatch
+from app.inventory.models import Product, ProductBatch, ProductVariant
 from app.auth.models import User, RoleEnum
 
 
 @pytest.fixture(scope='function')
-def client():
-    app = create_app('testing')
-    with app.app_context():
-        db.create_all()
-        # Seed admin user
-        user = User(username='admin', name='Admin', role=RoleEnum.admin)
-        user.set_password('admin123')
-        db.session.add(user)
-        db.session.commit()
-        yield app.test_client()
-        db.drop_all()
+def client(app):
+    """Uses the global app fixture and seeds admin user."""
+    # setup_database (from conftest) already ran db.create_all()
+    user = User(username='admin', name='Admin', role=RoleEnum.admin)
+    user.set_password('admin123')
+    db.session.add(user)
+    db.session.commit()
+    return app.test_client()
 
 
 def login(client):
@@ -41,22 +38,27 @@ def login(client):
 
 def make_product_with_batches(app_ctx):
     """Creates product with two batches for FIFO testing."""
-    p = Product(name='Test Cookie', barcode='TEST001', price=100, stock=20, gst_percent=5)
+    p = Product(name='Test Cookie', barcode='LEGACY-TEST001', price=100, stock=20, gst_percent=5)
     db.session.add(p)
+    db.session.flush()
+
+    # Create a variant so it has stock and can be sold
+    v = ProductVariant(product_id=p.id, size='STD', color='Default', barcode='TEST001', price=100, stock=20)
+    db.session.add(v)
     db.session.flush()
 
     today = date.today()
     batch_old = ProductBatch(
         product_id=p.id,
         batch_number='BATCH-A',
-        expiry_date=today + timedelta(days=10),  # expires sooner → should be consumed first
+        expiry_date=today + timedelta(days=10),
         quantity=10,
         cost_price=80,
     )
     batch_new = ProductBatch(
         product_id=p.id,
         batch_number='BATCH-B',
-        expiry_date=today + timedelta(days=20),  # expires later
+        expiry_date=today + timedelta(days=20),
         quantity=10,
         cost_price=80,
     )
@@ -135,8 +137,11 @@ def test_batch_view_route(client):
     """GET /inventory/<id>/batches → 200 for existing product."""
     login(client)
     with client.application.app_context():
-        p = Product(name='Snack', barcode='SNACK001', price=50, stock=5, gst_percent=0)
+        p = Product(name='Snack', barcode='LEGACY-SNACK001', price=50, stock=5, gst_percent=0)
         db.session.add(p)
+        db.session.flush()
+        v = ProductVariant(product_id=p.id, size='STD', color='Default', barcode='SNACK001', price=50, stock=5)
+        db.session.add(v)
         db.session.commit()
         pid = p.id
 
@@ -148,8 +153,11 @@ def test_add_batch_route_get(client):
     """GET /inventory/<id>/batches/add → 200 for admin."""
     login(client)
     with client.application.app_context():
-        p = Product(name='Snack2', barcode='SNACK002', price=50, stock=5, gst_percent=0)
+        p = Product(name='Snack2', barcode='LEGACY-SNACK002', price=50, stock=5, gst_percent=0)
         db.session.add(p)
+        db.session.flush()
+        v = ProductVariant(product_id=p.id, size='STD', color='Default', barcode='SNACK002', price=50, stock=5)
+        db.session.add(v)
         db.session.commit()
         pid = p.id
 
@@ -161,8 +169,11 @@ def test_add_batch_increases_stock(client):
     """POST to add_batch increases product.stock and creates ProductBatch."""
     login(client)
     with client.application.app_context():
-        p = Product(name='Snack3', barcode='SNACK003', price=50, stock=10, gst_percent=0)
+        p = Product(name='Snack3', barcode='LEGACY-SNACK003', price=50, stock=10, gst_percent=0)
         db.session.add(p)
+        db.session.flush()
+        v = ProductVariant(product_id=p.id, size='STD', color='Default', barcode='SNACK003', price=50, stock=10)
+        db.session.add(v)
         db.session.commit()
         pid = p.id
 
@@ -205,5 +216,5 @@ def test_dashboard_expiry_alert_visible(client):
 
     resp = client.get('/')
     assert resp.status_code == 200
-    assert b'Expiring Within 14 Days' in resp.data or b'EXP-BATCH' in resp.data, \
+    assert b'Expiring Soon (14 Days)' in resp.data or b'EXP-BATCH' in resp.data, \
         "Dashboard should show expiry warning"

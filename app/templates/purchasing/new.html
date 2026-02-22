@@ -22,6 +22,7 @@
     </a>
 
     <form method="POST" action="{{ url_for('purchasing.new_po') }}" id="po-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {# ── Left column: PO header ── #}

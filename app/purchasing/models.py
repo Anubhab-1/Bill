@@ -100,6 +100,10 @@ class PurchaseOrder(db.Model):
 class PurchaseOrderItem(db.Model):
     """A single product line on a Purchase Order."""
     __tablename__ = 'purchase_order_items'
+    __table_args__ = (
+        db.CheckConstraint('ordered_qty > 0', name='check_purchase_order_item_qty_positive'),
+        db.CheckConstraint('unit_cost IS NULL OR unit_cost >= 0', name='check_purchase_order_item_unit_cost_non_negative'),
+    )
 
     id          = db.Column(db.Integer, primary_key=True)
     po_id       = db.Column(db.Integer, db.ForeignKey('purchase_orders.id', ondelete='CASCADE'),
@@ -156,6 +160,9 @@ class GoodsReceipt(db.Model):
 class GoodsReceiptItem(db.Model):
     """A single product line in a GRN."""
     __tablename__ = 'goods_receipt_items'
+    __table_args__ = (
+        db.CheckConstraint('received_qty > 0', name='check_goods_receipt_item_qty_positive'),
+    )
 
     id           = db.Column(db.Integer, primary_key=True)
     grn_id       = db.Column(db.Integer, db.ForeignKey('goods_receipts.id', ondelete='CASCADE'),

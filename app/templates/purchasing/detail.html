@@ -71,6 +71,7 @@
         <div class="space-y-2">
             {% if po.status == POStatus.DRAFT %}
             <form method="POST" action="{{ url_for('purchasing.send_po', po_id=po.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit"
                     class="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
                     Mark as SENT
@@ -88,6 +89,7 @@
             {% if po.status in (POStatus.DRAFT, POStatus.SENT) %}
             <form method="POST" action="{{ url_for('purchasing.cancel_po', po_id=po.id) }}"
                 onsubmit="return confirm('Cancel PO #{{ po.id }}?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="w-full py-2.5 px-4 bg-transparent border border-red-800 text-red-400 hover:bg-red-900/20
                            text-sm font-medium rounded-lg transition-colors">
                     Cancel PO

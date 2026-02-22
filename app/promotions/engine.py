@@ -11,8 +11,8 @@ admin tester) decides how to act on the result.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+from typing import List, Optional, Union
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List
 
 
 Q = Decimal('0.01')   # quantize target
@@ -21,7 +21,7 @@ Q = Decimal('0.01')   # quantize target
 @dataclass
 class AppliedEntry:
     """One applied promo discount."""
-    promo_id:        int | None
+    promo_id:        Optional[int]
     promo_name:      str
     discount_amount: Decimal
     description:     str
@@ -46,8 +46,8 @@ def _handle_percentage_item(promo, cart: dict) -> Decimal:
     percent     = Decimal(str(params.get('percent', 0)))
 
     discount = Decimal('0')
-    for pid, item in cart.items():
-        if pid in product_ids:
+    for _, item in cart.items():
+        if str(item.get('product_id')) in product_ids:
             price = Decimal(item['price'])
             qty   = Decimal(item['quantity'])
             line  = (price * qty).quantize(Q)
@@ -62,8 +62,8 @@ def _handle_fixed_item(promo, cart: dict) -> Decimal:
     amount      = Decimal(str(params.get('amount', 0)))
 
     discount = Decimal('0')
-    for pid, item in cart.items():
-        if pid in product_ids:
+    for _, item in cart.items():
+        if str(item.get('product_id')) in product_ids:
             price    = Decimal(item['price'])
             qty      = Decimal(item['quantity'])
             line     = (price * qty).quantize(Q)
@@ -80,19 +80,30 @@ def _handle_bill_percentage(promo, cart: dict, cart_subtotal: Decimal) -> Decima
 def _handle_buy_x_get_y(promo, cart: dict) -> Decimal:
     """
     Buy X, Get Y free for a specific product.
-    Example: buy 2, get 1 free → for every (buy+free) units, free_qty units are discounted.
+    Aggregates quantity across all variants of the same product in the cart.
     """
     params     = promo.params_dict
     product_id = str(params.get('product_id', ''))
     buy_qty    = int(params.get('buy_qty', 1))
     free_qty   = int(params.get('free_qty', 1))
 
-    item = cart.get(product_id)
-    if not item:
-        return Decimal('0')
+    # Aggregate quantities for this product across all variants
+    total_qty = 0
+    unit_price = Decimal('0')
+    found = False
 
-    total_qty  = int(item['quantity'])
-    unit_price = Decimal(item['price'])   # for regular items this is unit price
+    for item in cart.values():
+        if str(item.get('product_id')) == product_id:
+            total_qty += int(item['quantity'])
+            # We use the price of the first variant found as representative, 
+            # or ideally the cheapest/most expensive? 
+            # Standard retail logic uses the item price for each free unit.
+            if not found:
+                unit_price = Decimal(item['price'])
+                found = True
+
+    if not found or total_qty < (buy_qty + free_qty):
+        return Decimal('0')
 
     # Number of full cycles: e.g. buy 2 get 1 → cycle = 3 units
     cycle       = buy_qty + free_qty
@@ -186,7 +197,7 @@ def evaluate_promotions(cart: dict, promotions: list) -> PromoResult:
     # ── Determine final set of applied discounts ──────────────────
     stackable_total = sum((e.discount_amount for e in stackable_entries), start=Decimal('0'))
 
-    best_non_stack: AppliedEntry | None = None
+    best_non_stack: Optional[AppliedEntry] = None
     if non_stackable_entries:
         best_non_stack = max(non_stackable_entries, key=lambda e: e.discount_amount)
 

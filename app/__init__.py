@@ -1,28 +1,49 @@
 import click
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from config import config
 
 db = SQLAlchemy()
 
 
 def create_app(config_name='default'):
     """Application factory — creates and configures the Flask app."""
+    import os
+    from config import config
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # Enforce strict SECRET_KEY for production
+    if config_name == 'production' or app.config.get('FLASK_ENV') == 'production':
+        sk = app.config.get('SECRET_KEY')
+        if not sk or sk == 'dev-secret-key-change-in-production':
+            raise RuntimeError('SECRET_KEY must be set to a secure unique value in production.')
+
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        raise RuntimeError('DATABASE_URL environment variable is not set.')
+
+    if not database_url.startswith('postgresql://'):
+        raise RuntimeError('DATABASE_URL must start with postgresql://')
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
+    # Strict PostgreSQL Engine Options
+    engine_options = dict(app.config.get('SQLALCHEMY_ENGINE_OPTIONS') or {})
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
+
+    app.logger.info(f"Strict PostgreSQL Mode: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
     # ── Logging ───────────────────────────────────────────────────
     from app.utils.logging import setup_logging
     setup_logging(app)
 
     # ── Extensions ────────────────────────────────────────────────
-    # ── Extensions ────────────────────────────────────────────────
+    from flask_wtf.csrf import CSRFProtect
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+
     db.init_app(app)
 
-    # ── Auto-Migration (Critical for Production) ──
-    # Runs inline to ensure schema is correct before any request
-    from app.migration import run_auto_migration
-    run_auto_migration(app)
 
     # ── Blueprints ────────────────────────────────────────────────
     from app.main import main as main_blueprint
@@ -72,6 +93,11 @@ def create_app(config_name='default'):
     def not_found(e):
         from flask import render_template
         return render_template('errors/404.html', title='Page Not Found'), 404
+
+    @app.teardown_request
+    def rollback_on_exception(exc):
+        if exc is not None:
+            db.session.rollback()
 
     from sqlalchemy.exc import OperationalError
     @app.errorhandler(OperationalError)
@@ -190,104 +216,14 @@ def register_commands(app):
 
     @app.cli.command('patch-db')
     def patch_db():
-    # ... (existing patch_db code) ...
-        click.echo("✅ Schema patch complete.")
+        """Apply safe schema patches."""
+        from app.migration import run_auto_migration
+        run_auto_migration(app)
+        click.echo("Schema patch complete.")
 
     from app.seed_history import seed_history
     app.cli.add_command(seed_history)
 
-    @app.cli.command('seed-demo')
-    def seed_demo():
-        """Apply schema updates: new columns and tables."""
-        from sqlalchemy import text, inspect
-        
-        # 0. Compare imports to ensure all models are known to SQLAlchemy
-        import app.auth.models
-        import app.inventory.models
-        import app.billing.models
-        import app.promotions.models
-        import app.customers.models
-        import app.purchasing.models
-        
-        # 1. Add missing tables (InventoryLog, Promotions, Customers, Returns)
-        db.create_all()
-        click.echo("✅ Verified all tables.")
-
-        # 2. Add columns to existing tables
-        with db.engine.connect() as conn:
-            inspector = inspect(conn)
-            
-            # Helper to check if column exists
-            def column_exists(table, column):
-                headers = [c['name'] for c in inspector.get_columns(table)]
-                return column in headers
-
-            # Helper to check if table exists
-            def table_exists(table):
-                return inspector.has_table(table)
-
-            # Sales: payment_method
-            if not column_exists('sales', 'payment_method'):
-                conn.execute(text("ALTER TABLE sales ADD COLUMN payment_method VARCHAR(20) DEFAULT 'cash' NOT NULL"))
-                click.echo("✅ Added payment_method to sales.")
-
-            # Sales: is_printed
-            if not column_exists('sales', 'is_printed'):
-                conn.execute(text("ALTER TABLE sales ADD COLUMN is_printed BOOLEAN DEFAULT FALSE"))
-                click.echo("✅ Added is_printed to sales.")
-            
-            # Sales: customer_id (FK)
-            # Critical: Ensure target table exists first
-            if table_exists('customers') and not column_exists('sales', 'customer_id'):
-                try:
-                    conn.execute(text("ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id)"))
-                    click.echo("✅ Added customer_id to sales.")
-                except Exception as e:
-                    click.echo(f"⚠️ Failed to add customer_id: {e}")
-
-            # Products: is_active
-            if not column_exists('products', 'is_active'):
-                conn.execute(text("ALTER TABLE products ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
-                click.echo("✅ Added is_active to products.")
-
-            # Products: is_weighed
-            if not column_exists('products', 'is_weighed'):
-                 conn.execute(text("ALTER TABLE products ADD COLUMN is_weighed BOOLEAN DEFAULT FALSE NOT NULL"))
-                 click.echo("✅ Added is_weighed to products.")
-
-            # Products: price_per_kg
-            if not column_exists('products', 'price_per_kg'):
-                 conn.execute(text("ALTER TABLE products ADD COLUMN price_per_kg NUMERIC(10,2)"))
-                 click.echo("✅ Added price_per_kg to products.")
-
-            # SaleItems: weight_kg
-            if not column_exists('sale_items', 'weight_kg'):
-                 conn.execute(text("ALTER TABLE sale_items ADD COLUMN weight_kg NUMERIC(8,3)"))
-                 click.echo("✅ Added weight_kg to sale_items.")
-
-            # SaleItems: unit_label
-            if not column_exists('sale_items', 'unit_label'):
-                 conn.execute(text("ALTER TABLE sale_items ADD COLUMN unit_label VARCHAR(10)"))
-                 click.echo("✅ Added unit_label to sale_items.")
-
-            # 3. Add CHECK constraints (PostgreSQL)
-            # These can fail if data violates them, so we wrap comfortably.
-            constraints = [
-                ("check_stock_non_negative", "ALTER TABLE products ADD CONSTRAINT check_stock_non_negative CHECK (stock >= 0)"),
-                ("check_price_positive",     "ALTER TABLE products ADD CONSTRAINT check_price_positive CHECK (price > 0)"),
-                ("check_gst_valid",          "ALTER TABLE products ADD CONSTRAINT check_gst_valid CHECK (gst_percent >= 0 AND gst_percent <= 28)"),
-            ]
-            
-            for name, sql in constraints:
-                try:
-                    conn.execute(text(sql))
-                    click.echo(f"✅ Added constraint: {name}")
-                except Exception:
-                    pass
-
-            conn.commit()
-
-        click.echo("✅ Schema patch complete.")
 
     @app.cli.command('seed-demo')
     def seed_demo():
@@ -362,30 +298,3 @@ def register_commands(app):
         pass
 
     return app
-
-# ── Compatibility with Render's default 'gunicorn app:app' ──
-# This allows the package to be imported as an application object directly.
-import os
-try:
-    # Only create if not main script and NOT running a flask command (to avoid double seed)
-    if __name__ != '__main__' and not os.environ.get('FLASK_RUN_FROM_CLI'):
-        env_name = os.environ.get('FLASK_ENV', 'production')
-        app = create_app(env_name)
-        
-        # ── AUTO-SEED (moved from wsgi.py) ──
-        # Critical for Render Free Tier where Shell is hard to access
-        if env_name == 'production':
-            try:
-                with app.app_context():
-                    db.create_all()
-                    from app.auth.models import User
-                    if not User.query.first():
-                        print("🌱 Database empty. Auto-seeding...")
-                        import subprocess
-                        # Using subprocess to run the distinct CLI command
-                        subprocess.run(["flask", "seed-demo"], check=True)
-            except Exception as e:
-                print(f"⚠️ Auto-seed failed: {e}")
-                
-except Exception:
-    pass

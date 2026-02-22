@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block page_title %}Exchange Workflow{% endblock %}
+{% block page_subtitle %}Invoice: {{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-6">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Original Sale</p>
+                <p class="text-white text-lg font-medium mt-1">{{ sale.invoice_number }}</p>
+                <p class="text-sm text-gray-400">{{ sale.created_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+            </div>
+            <div class="text-right">
+                <a href="{{ url_for('billing.returns_process', sale_id=sale.id) }}"
+                    class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors">
+                    Back to Returns
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if returnable_items %}
+    <form method="POST" action="{{ url_for('billing.exchange_process', sale_id=sale.id) }}"
+        onsubmit="return confirm('Confirm this exchange? Stock and records will be updated atomically.');"
+        class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-5">
+            <h3 class="text-lg font-semibold text-white">Select Exchange Items</h3>
+
+            <div>
+                <label for="sale_item_id" class="block text-sm font-medium text-gray-300 mb-2">
+                    Previously Sold Variant
+                </label>
+                <select id="sale_item_id" name="sale_item_id" required onchange="recalculateExchange()"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    {% for row in returnable_items %}
+                    <option value="{{ row.item.id }}"
+                        data-unit-total="{{ '%.2f'|format(row.unit_total|float) }}"
+                        data-max="{{ row.remaining }}">
+                        {{ row.item.variant.product.name if row.item.variant else 'Unknown Product' }}
+                        | {{ row.item.snapshot_size }}/{{ row.item.snapshot_color }}
+                        | Eligible: {{ row.remaining }}
+                        | Old Unit Gross: Rs {{ '%.2f'|format(row.unit_total|float) }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="new_variant_id" class="block text-sm font-medium text-gray-300 mb-2">
+                    New Variant
+                </label>
+                <select id="new_variant_id" name="new_variant_id" required onchange="recalculateExchange()"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    {% for row in new_variants %}
+                    <option value="{{ row.variant.id }}"
+                        data-unit-total="{{ '%.2f'|format(row.unit_total|float) }}"
+                        data-stock="{{ row.variant.stock }}">
+                        {{ row.variant.product.name if row.variant.product else 'Unknown Product' }}
+                        | {{ row.variant.size }}/{{ row.variant.color }}
+                        | Stock: {{ row.variant.stock }}
+                        | New Unit Gross: Rs {{ '%.2f'|format(row.unit_total|float) }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-300 mb-2">Quantity</label>
+                    <input id="quantity" name="quantity" type="number" min="1" value="1" required
+                        oninput="recalculateExchange()"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <p class="text-xs text-gray-500 mt-1" id="qty_hint">Enter quantity to exchange.</p>
+                </div>
+                <div>
+                    <label for="note" class="block text-sm font-medium text-gray-300 mb-2">Note (optional)</label>
+                    <input id="note" name="note" type="text" placeholder="Reason or context"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Exchange Difference</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-gray-400">Old Gross Value</p>
+                    <p class="text-white text-xl font-semibold" id="old_total">Rs 0.00</p>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-gray-400">New Gross Value</p>
+                    <p class="text-white text-xl font-semibold" id="new_total">Rs 0.00</p>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-gray-400">Difference</p>
+                    <p class="text-xl font-semibold" id="difference_text">Rs 0.00</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label for="collect_method" class="block text-sm font-medium text-gray-300 mb-2">
+                        If Collection Needed
+                    </label>
+                    <select id="collect_method" name="collect_method"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="refund_method" class="block text-sm font-medium text-gray-300 mb-2">
+                        If Refund Needed
+                    </label>
+                    <select id="refund_method" name="refund_method"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                        <option value="store_credit">Store Credit</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                Complete Exchange
+            </button>
+        </div>
+    </form>
+    {% else %}
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+        <p class="text-gray-300">No return-eligible quantities remain for this invoice.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function recalculateExchange() {
+        const oldSelect = document.getElementById('sale_item_id');
+        const newSelect = document.getElementById('new_variant_id');
+        const qtyInput = document.getElementById('quantity');
+
+        if (!oldSelect || !newSelect || !qtyInput) return;
+
+        const oldOption = oldSelect.options[oldSelect.selectedIndex];
+        const newOption = newSelect.options[newSelect.selectedIndex];
+
+        const oldUnit = parseFloat(oldOption.dataset.unitTotal || '0');
+        const newUnit = parseFloat(newOption.dataset.unitTotal || '0');
+        const maxEligible = parseInt(oldOption.dataset.max || '0', 10);
+        const newStock = parseInt(newOption.dataset.stock || '0', 10);
+
+        let qty = parseInt(qtyInput.value || '1', 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+
+        qtyInput.max = Math.max(1, Math.min(maxEligible, newStock));
+        if (qty > qtyInput.max) {
+            qty = qtyInput.max;
+            qtyInput.value = qty;
+        }
+
+        const oldTotal = oldUnit * qty;
+        const newTotal = newUnit * qty;
+        const diff = newTotal - oldTotal;
+
+        const oldEl = document.getElementById('old_total');
+        const newEl = document.getElementById('new_total');
+        const diffEl = document.getElementById('difference_text');
+        const hintEl = document.getElementById('qty_hint');
+
+        oldEl.textContent = 'Rs ' + oldTotal.toFixed(2);
+        newEl.textContent = 'Rs ' + newTotal.toFixed(2);
+
+        if (diff > 0) {
+            diffEl.textContent = 'Collect Rs ' + diff.toFixed(2);
+            diffEl.className = 'text-xl font-semibold text-amber-400';
+        } else if (diff < 0) {
+            diffEl.textContent = 'Refund Rs ' + Math.abs(diff).toFixed(2);
+            diffEl.className = 'text-xl font-semibold text-emerald-400';
+        } else {
+            diffEl.textContent = 'Rs 0.00 (Even Exchange)';
+            diffEl.className = 'text-xl font-semibold text-blue-300';
+        }
+
+        hintEl.textContent = 'Eligible max: ' + maxEligible + ' | Replacement stock: ' + newStock;
+    }
+
+    recalculateExchange();
+</script>
+{% endblock %}

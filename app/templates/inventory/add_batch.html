@@ -14,6 +14,7 @@
     </div>
 
     <form method="POST" class="bg-slate-800 rounded-xl p-6 space-y-5 shadow-lg">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         {# Batch Number #}
         <div>

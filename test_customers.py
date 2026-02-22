@@ -3,40 +3,48 @@ import pytest
 from decimal import Decimal
 from app import create_app, db
 from app.auth.models import User, RoleEnum
-from app.inventory.models import Product
+from app.inventory.models import Product, ProductVariant
 from app.customers.models import Customer, GiftCard
 from app.billing.models import Sale, SalePayment, CashSession
 
 @pytest.fixture
-def client():
-    app = create_app(config_name='testing')
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-            
-            # Setup User/Admin
-            admin = User(username='admin', name='Admin User', role=RoleEnum.admin)
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.flush() # Generate ID
-            
-            # Setup Product
-            p1 = Product(name="Test Item", barcode="123456", price=100.00, stock=100)
-            db.session.add(p1)
-            
-            # Setup Cash Session
-            session = CashSession(cashier_id=admin.id, opening_cash=1000)
-            db.session.add(session)
-            
-            db.session.commit()
-            
+def client(app):
+    """Uses the global app fixture and seeds initial test data."""
+    with app.app_context():
+        # setup_database (from conftest) already ran db.create_all()
+        
+        # Setup User/Admin
+        admin = User(username='admin', name='Admin User', role=RoleEnum.admin)
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.flush() # Generate ID
+        
+        # Setup Product & Variant
+        p1 = Product(name="Test Item", barcode="P123", gst_percent=0)
+        db.session.add(p1)
+        db.session.flush()
+        
+        v1 = ProductVariant(
+            product_id=p1.id, 
+            barcode="123456", 
+            price=Decimal("100.00"), 
+            stock=100,
+            size="NA",
+            color="NA"
+        )
+        db.session.add(v1)
+        
+        # Setup Cash Session
+        session = CashSession(cashier_id=admin.id, opening_cash=Decimal("1000.00"))
+        db.session.add(session)
+        
+        db.session.commit()
+        
+        # Return test client
+        with app.test_client() as client:
             # Login
             client.post('/auth/login', data={'username': 'admin', 'password': 'admin123'})
-            
-        yield client
-        
-        with app.app_context():
-            db.drop_all()
+            yield client
 
 def test_create_and_search_customer(client):
     # Create

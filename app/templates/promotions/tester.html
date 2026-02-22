@@ -5,7 +5,7 @@
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-    {{-- Cart Builder --}}
+    {# Cart Builder #}
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <p class="text-sm font-semibold text-white mb-4">Build Sample Cart</p>
         <form id="tester-form" hx-post="{{ url_for('promotions.tester_preview') }}" hx-target="#promo-preview"
@@ -45,7 +45,7 @@
         </form>
     </div>
 
-    {{-- Preview panel --}}
+    {# Preview panel #}
     <div id="promo-preview"
         class="bg-gray-900 border border-gray-800 rounded-xl p-5 min-h-[200px] flex items-center justify-center">
         <p class="text-sm text-gray-600">Build a cart and click "Preview" to see applied discounts.</p>

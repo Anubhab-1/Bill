@@ -14,23 +14,24 @@ log.setLevel(logging.ERROR)
 
 def test_production_config_values():
     """Verify the configuration values are set correctly."""
+    import os
+    os.environ['SECRET_KEY'] = 'test-secret-key-for-audit'
     app = create_app('production')
     opts = app.config['SQLALCHEMY_ENGINE_OPTIONS']
     
-    assert opts['pool_size'] == 20
-    assert opts['max_overflow'] == 10
+    assert opts['pool_size'] == 10
+    assert opts['max_overflow'] == 20
     assert opts['pool_timeout'] == 30
     print("\n✅ Configuration values verified.")
 
 def test_concurrency_simulation():
     """
     Run 50 concurrent DB connections simulation.
-    Since we are using SQLite locally, we must force QueuePool to test the limits.
+    Force QueuePool settings so pool limits are validated deterministically.
     """
     app = create_app('development')
     
-    # Force QueuePool to respect pool_size with SQLite
-    # We use the Config values: size=20, overflow=10 -> Max 30 concurrent.
+    # Use explicit QueuePool settings: size=20, overflow=10 -> Max 30 concurrent.
     # We will launch 50 threads. 30 should run, 20 should wait.
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_size': 20,

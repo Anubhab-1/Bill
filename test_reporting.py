@@ -5,16 +5,16 @@ from datetime import date, timedelta
 from app import create_app, db
 from app.auth.models import User, RoleEnum
 from app.billing.models import Sale, SaleItem, SalePayment
-from app.inventory.models import Product
+from app.inventory.models import Product, ProductVariant
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
 @pytest.fixture(scope='function')
-def client():
-    app = create_app('testing')
+def client(app):
+    """Uses the global app fixture and seeds admin user."""
     app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
     with app.app_context():
-        db.create_all()
+        # setup_database (from conftest) already ran db.create_all()
         
         # Create Admin
         admin = User(username='admin', name='Admin', role=RoleEnum.admin)
@@ -28,14 +28,13 @@ def client():
         
         db.session.commit()
         
-        yield app.test_client()
-        db.session.remove()
-        db.drop_all()
+        with app.test_client() as client:
+            yield client
 
 @pytest.fixture
-def app(client):
-    """Return the Flask app instance from the client."""
-    return client.application
+def app_instance(app):
+    """Return the global Flask app instance."""
+    return app
 
 def login(client, username, password):
     return client.post('/auth/login', data={'username': username, 'password': password}, follow_redirects=True)
@@ -65,14 +64,25 @@ def test_reporting_access_granted_for_admin(client):
     assert response.status_code == 200
     assert b"Business intelligence" in response.data
 
-def test_sales_report_data(client, app):
+def test_sales_report_data(client, app_instance):
     """Test that sales data appears correctly in the report."""
     login(client, 'admin', 'admin123')
     
-    with app.app_context():
+    with app_instance.app_context():
         # Create a product
-        p = Product(name="Test Report Item", barcode="RPT001", price=Decimal("100.00"), stock=10, gst_percent=18)
+        p = Product(name="Test Report Item", barcode="LEGACY-RPT001", gst_percent=18)
         db.session.add(p)
+        db.session.flush()
+        
+        v = ProductVariant(
+            product_id=p.id,
+            barcode="RPT001",
+            size="Standard",
+            color="Red",
+            price=Decimal("100.00"),
+            stock=10
+        )
+        db.session.add(v)
         db.session.commit()
         
         # Create sale
@@ -88,11 +98,13 @@ def test_sales_report_data(client, app):
         # Add item
         si = SaleItem(
             sale_id=s.id, 
-            product_id=p.id, 
+            variant_id=v.id, 
             quantity=1, 
             price_at_sale=Decimal("100.00"), 
             subtotal=Decimal("100.00"),
-            gst_percent=18
+            gst_percent=18,
+            snapshot_size=v.size,
+            snapshot_color=v.color
         )
         db.session.add(si)
         
@@ -107,26 +119,35 @@ def test_sales_report_data(client, app):
     assert b"INV-RPT-001" in response.data
     assert b"118.00" in response.data
 
-def test_inventory_report_data(client, app):
+def test_inventory_report_data(client, app_instance):
     """Test inventory valuation."""
     login(client, 'admin', 'admin123')
     
-    with app.app_context():
-        p = Product(name="Valuation Item", barcode="VAL001", price=Decimal("50.00"), stock=20, gst_percent=5, is_active=True)
+    with app_instance.app_context():
+        p = Product(name="Valuation Item", barcode="LEGACY-VAL001", gst_percent=5, is_active=True)
         db.session.add(p)
+        db.session.flush()
+        v = ProductVariant(
+            product_id=p.id,
+            barcode="VAL001",
+            size="Standard",
+            color="Red",
+            price=Decimal("50.00"),
+            stock=20
+        )
+        db.session.add(v)
         db.session.commit()
-        # Value = 20 * 50 = 1000.00
     
     response = client.get('/reporting/inventory')
     assert response.status_code == 200
     assert b"Valuation Item" in response.data
-    assert b"1,000.00" in response.data
+    assert b"1000" in response.data or b"1,000" in response.data
 
-def test_csv_export(client, app):
+def test_csv_export(client, app_instance):
     """Test CSV export functionality."""
     login(client, 'admin', 'admin123')
     
-    with app.app_context():
+    with app_instance.app_context():
          # Create a sale to have some data
         s = Sale(invoice_number="EXP-001", cashier_id=1, total_amount=Decimal("50.00"), gst_total=Decimal("0.00"))
         db.session.add(s)

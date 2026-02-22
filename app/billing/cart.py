@@ -1,162 +1,114 @@
-"""
-app/billing/cart.py
---------------------
-Stateless helpers for the session-based shopping cart.
-
-Cart structure stored in Flask session under key 'cart':
-{
-    "<product_id_str>": {
-        "name":        str,
-        "barcode":     str,
-        "price":       str,   ← stored as string to survive JSON serialisation
-        "gst_percent": int,
-        "quantity":    int
-    },
-    ...
-}
-
-All money values are kept as strings in the session and converted
-to Decimal only when computing totals — avoids float contamination.
-"""
 from decimal import Decimal
+
 from flask import session
 
 
 CART_KEY = 'cart'
 
 
-# ── Read ──────────────────────────────────────────────────────────
-
 def get_cart() -> dict:
-    """Return the current cart dict (may be empty)."""
     return session.get(CART_KEY, {})
 
 
-# ── Write ─────────────────────────────────────────────────────────
-
-def add_to_cart(product) -> None:
-    """
-    Add one unit of `product` to the cart.
-    If already present, increments quantity by 1.
-    """
+def add_to_cart(variant) -> None:
     cart = get_cart()
-    key  = str(product.id)
+    key = str(variant.id)
+    product = variant.product
 
     if key in cart:
         cart[key]['quantity'] += 1
     else:
         cart[key] = {
-            'name':        product.name,
-            'barcode':     product.barcode,
-            'price':       str(product.price),   # Decimal → str for JSON safety
+            'product_id': product.id,
+            'name': product.name,
+            'barcode': variant.barcode,
+            'price': str(variant.price),
             'gst_percent': product.gst_percent,
-            'quantity':    1,
-            'is_weighed':  False,
-            'weight_kg':   None,
+            'quantity': 1,
+            'is_weighed': False,
+            'weight_kg': None,
             'price_per_kg': None,
+            'variant_id': variant.id,
+            'size': variant.size,
+            'color': variant.color,
         }
 
     session[CART_KEY] = cart
-    session.modified   = True
+    session.modified = True
 
 
-def add_weighed_to_cart(product, weight_kg: Decimal) -> None:
-    """
-    Add a weighed item to the cart (or replace its weight if already present).
-    For weighed items there is always exactly 1 line in the cart;
-    the 'price' is the computed total for that specific weight.
-    Each new scan opens a fresh weight entry — keyed by product_id + a
-    running suffix so multiple weighings of the same product are supported.
-    """
+def add_weighed_to_cart(variant, weight_kg: Decimal) -> None:
     cart = get_cart()
-    # Use a dedicated key for weighed items so multiple weighings are possible
-    # e.g. product id 5 → "5", second weighing → "5w1", third → "5w2"
-    base_key = str(product.id)
-    # Find a free slot
-    slot = base_key
-    if slot in cart and cart[slot].get('is_weighed'):
-        # Already a weighed entry — update it in-place (last scan wins)
-        cart[slot]['weight_kg']  = str(weight_kg)
-        cart[slot]['price']      = str((Decimal(str(product.price_per_kg)) * weight_kg).quantize(Decimal('0.01')))
+    key = str(variant.id)
+    product = variant.product
+    line_price = (Decimal(str(product.price_per_kg)) * weight_kg).quantize(Decimal('0.01'))
+
+    if key in cart and cart[key].get('is_weighed'):
+        cart[key]['weight_kg'] = str(weight_kg)
+        cart[key]['price'] = str(line_price)
     else:
-        line_price = (Decimal(str(product.price_per_kg)) * weight_kg).quantize(Decimal('0.01'))
-        cart[slot] = {
-            'name':         product.name,
-            'barcode':      product.barcode,
-            'price':        str(line_price),      # total price for this weight
-            'gst_percent':  product.gst_percent,
-            'quantity':     1,                    # always 1 "unit" = the weighed portion
-            'is_weighed':   True,
-            'weight_kg':    str(weight_kg),
+        cart[key] = {
+            'product_id': product.id,
+            'name': product.name,
+            'barcode': variant.barcode,
+            'price': str(line_price),
+            'gst_percent': product.gst_percent,
+            'quantity': 1,
+            'is_weighed': True,
+            'weight_kg': str(weight_kg),
             'price_per_kg': str(product.price_per_kg),
+            'variant_id': variant.id,
+            'size': variant.size,
+            'color': variant.color,
         }
 
     session[CART_KEY] = cart
-    session.modified   = True
+    session.modified = True
 
 
-def update_cart_quantity(product_id: int, quantity: int) -> None:
-    """
-    Update quantity for a specific product.
-    If quantity <= 0, remove the item.
-    """
+def update_cart_quantity(variant_id: int, quantity: int) -> None:
     cart = get_cart()
-    key  = str(product_id)
+    key = str(variant_id)
 
     if key in cart:
         if quantity <= 0:
             cart.pop(key)
         else:
             cart[key]['quantity'] = quantity
-        
+
         session[CART_KEY] = cart
-        session.modified   = True
+        session.modified = True
 
 
-def remove_from_cart(product_id: int) -> None:
-    """Remove a product entirely from the cart."""
+def remove_from_cart(variant_id: int) -> None:
     cart = get_cart()
-    cart.pop(str(product_id), None)
+    cart.pop(str(variant_id), None)
     session[CART_KEY] = cart
-    session.modified   = True
+    session.modified = True
 
 
 def clear_cart() -> None:
-    """Empty the cart after a completed sale."""
     session.pop(CART_KEY, None)
     session.modified = True
 
 
-# ── Totals ────────────────────────────────────────────────────────
-
 def cart_totals(cart: dict) -> dict:
-    """
-    Compute subtotal, gst_total, and grand_total for the cart.
-    All arithmetic uses Decimal — no float.
-
-    Returns:
-        {
-            'subtotal':    Decimal,   ← sum of (price × qty) before GST
-            'gst_total':   Decimal,   ← sum of GST amounts
-            'grand_total': Decimal,   ← subtotal + gst_total
-        }
-    """
-    subtotal  = Decimal('0')
+    subtotal = Decimal('0')
     gst_total = Decimal('0')
 
     for item in cart.values():
-        price    = Decimal(item['price'])
-        qty      = Decimal(item['quantity'])
+        price = Decimal(item['price'])
+        qty = Decimal(item['quantity'])
         gst_rate = Decimal(item['gst_percent']) / Decimal('100')
 
         line_subtotal = (price * qty).quantize(Decimal('0.01'))
-        line_gst      = (line_subtotal * gst_rate).quantize(Decimal('0.01'))
+        line_gst = (line_subtotal * gst_rate).quantize(Decimal('0.01'))
 
-        subtotal  += line_subtotal
+        subtotal += line_subtotal
         gst_total += line_gst
 
     return {
-        'subtotal':    subtotal,
-        'gst_total':   gst_total,
+        'subtotal': subtotal,
+        'gst_total': gst_total,
         'grand_total': subtotal + gst_total,
     }

@@ -8,11 +8,10 @@ Example: 2026-0001, 2026-0002, … 2026-9999, 2026-10000
 
 Algorithm
 ─────────
-1. Lock the InvoiceSequence row for the current year with SELECT … FOR UPDATE.
-   This serialises all concurrent calls — Tx B blocks until Tx A commits.
+1. Ensure a row exists for the current year using UPSERT-style insert.
+   - PostgreSQL: INSERT ... ON CONFLICT DO NOTHING
 
-2. If no row exists yet for this year (first sale of the year),
-   INSERT one with last_seq = 0, then lock it.
+2. Lock the row with SELECT ... FOR UPDATE.
 
 3. Increment last_seq by 1 and write it back.
 
@@ -31,6 +30,7 @@ in the invoice series — which can be a compliance issue for Indian GST
 invoicing. The table approach only advances when the sale actually commits.
 """
 from datetime import datetime
+from sqlalchemy import text
 
 
 def generate_invoice_number(db_session) -> str:
@@ -49,6 +49,12 @@ def generate_invoice_number(db_session) -> str:
     from app.billing.models import InvoiceSequence
 
     year = datetime.now().year
+    # Ensure the sequence row exists before locking.
+    db_session.execute(text("""
+        INSERT INTO invoice_sequences (year, last_seq)
+        VALUES (:year, 0)
+        ON CONFLICT (year) DO NOTHING
+    """), {'year': year})
 
     # ── Lock the sequence row for this year ───────────────────────
     # with_for_update() → SELECT … FOR UPDATE
@@ -61,19 +67,7 @@ def generate_invoice_number(db_session) -> str:
     )
 
     if seq_row is None:
-        # First sale of the year — create the sequence row.
-        # We insert with last_seq=0 so the increment below gives 1.
-        seq_row = InvoiceSequence(year=year, last_seq=0)
-        db_session.add(seq_row)
-        db_session.flush()          # write to DB so the row exists for the lock
-
-        # Re-acquire with FOR UPDATE now that the row exists
-        seq_row = (
-            db_session.query(InvoiceSequence)
-            .filter(InvoiceSequence.year == year)
-            .with_for_update()
-            .first()
-        )
+        raise RuntimeError(f'Failed to load invoice sequence row for year {year}.')
 
     # ── Increment and persist ─────────────────────────────────────
     seq_row.last_seq += 1

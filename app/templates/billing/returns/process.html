@@ -7,6 +7,13 @@
 
 <div class="max-w-6xl mx-auto mt-6">
 
+    <div class="flex justify-end mb-4">
+        <a href="{{ url_for('billing.exchange_process', sale_id=sale.id) }}"
+            class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors">
+            Open Exchange Workflow
+        </a>
+    </div>
+
     <!-- ── Sale Summary ────────────────────────────────────────────── -->
     <div
         class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -26,6 +33,7 @@
     <!-- ── Return Form ─────────────────────────────────────────────── -->
     <form method="POST" action="{{ url_for('billing.returns_process', sale_id=sale.id) }}"
         onsubmit="return confirm('Are you sure you want to process this return? Inventory will be updated.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl mb-6">
             <div class="p-6 border-b border-gray-800">
@@ -50,8 +58,9 @@
 
                     <tr class="hover:bg-gray-800/30 transition-colors">
                         <td class="px-6 py-4 font-medium text-white">
-                            {{ item.product.name }}
-                            <div class="text-xs text-gray-500 font-mono mt-0.5">{{ item.product.barcode }}</div>
+                            {{ item.variant.product.name if item.variant else item.product.name }}
+                            <div class="text-xs text-gray-500 font-mono mt-0.5">{{ item.variant.barcode if item.variant else item.product.barcode }}</div>
+                            <div class="text-xs text-gray-500">{{ item.snapshot_size }} / {{ item.snapshot_color }}</div>
                         </td>
                         <td class="px-6 py-4 text-right text-gray-300">
                             <!-- Unit Price with Tax = Subtotal / Qty -->
@@ -144,3 +153,4 @@
 </script>
 
 {% endblock %}
+

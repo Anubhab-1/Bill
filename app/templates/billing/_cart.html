@@ -1,412 +1,307 @@
-{#
-billing/_cart.html
-──────────────────
-HTMX partial — rendered both on initial page load (via {% include %})
-and returned by /billing/add-item and /billing/remove-item.
-Must be self-contained (no {% extends %}).
-#}
+{# billing/_cart.html — Pure HTMX Fragment #}
 
-<!-- Error banner (shown only when add-item fails) -->
+<!-- Error Alert -->
 {% if error %}
-<div class="mb-4 flex items-center gap-3 bg-red-500/10 border border-red-500/30
-            rounded-xl px-4 py-3 text-sm text-red-400">
-    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+<div
+    class="mb-6 flex items-center gap-4 bg-red-500/5 border border-red-500/10 rounded-2xl px-5 py-4 text-sm text-red-400">
+    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            stroke-width="2" />
     </svg>
-    {{ error }}
+    <span class="font-medium underline decoration-red-500/30">{{ error }}</span>
 </div>
 {% endif %}
 
 {% if cart %}
 
-<!-- ── Cart Table ─────────────────────────────────────────────── -->
-<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-4">
-    <table class="w-full text-sm">
-        <thead>
-            <tr class="border-b border-gray-800 text-left">
-                <th class="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Product</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">Qty</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Price</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">GST</th>
-                <th class="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Subtotal
-                </th>
-                <th class="px-4 py-3"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pid, item in cart.items() %}
-            {% set price = item.price | float %}
-            {% set qty = item.quantity %}
-            {% set subtotal = (price * qty) %}
-            {% set gst_amt = (subtotal * item.gst_percent / 100) %}
-            <tr class="border-b border-gray-800/60 last:border-0 hover:bg-gray-800/30 transition-colors">
-
-                <!-- Product name + barcode -->
-                <td class="px-4 py-3">
-                    <p class="font-medium text-white text-sm">
-                        {% if item.is_weighed %}⚖️ {% endif %}{{ item.name }}
-                    </p>
-                    <div class="flex flex-wrap items-center gap-2 mt-0.5">
-                        <p class="text-xs text-gray-500 font-mono">{{ item.barcode }}</p>
-                        {% if item.is_weighed and item.weight_kg %}
-                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
-                            {{ "%.3f"|format(item.weight_kg|float) }} kg @ ₹{{ "%.2f"|format(item.price_per_kg|float)
-                            }}/kg
-                        </span>
-                        {% endif %}
-                        {% if stock_map %}
-                        {% set stock = stock_map.get(pid, 0) %}
-                        {% if item.quantity >= stock %}
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500">
-                            Max Reached ({{ stock }})
-                        </span>
-                        {% else %}
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
-                            {{ stock }} Avail
-                        </span>
-                        {% endif %}
-                        {% endif %}
-                    </div>
-                </td>
-
-                <!-- Quantity Controls -->
-                <td class="px-4 py-3 text-center">
-                    <div class="flex items-center justify-center gap-2">
-                        <!-- Decrement -->
-                        <button hx-post="{{ url_for('billing.update_item') }}"
-                            hx-vals='{"product_id": "{{ pid }}", "action": "decr"}' hx-target="#cart-section"
-                            class="w-6 h-6 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-gray-600">
-                            -
-                        </button>
-
-                        <span class="text-white font-mono w-8 text-center">{{ qty }}</span>
-
-                        <!-- Increment -->
-                        {% set stock = stock_map.get(pid, 0) %}
-                        <button hx-post="{{ url_for('billing.update_item') }}"
-                            hx-vals='{"product_id": "{{ pid }}", "action": "incr"}' hx-target="#cart-section" {% if
-                            qty>= stock %}disabled{% endif %}
-                            class="w-6 h-6 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold flex
-                            items-center justify-center transition-colors focus:outline-none focus:ring-1
-                            focus:ring-gray-600 disabled:opacity-30 disabled:cursor-not-allowed
-                            disabled:hover:bg-gray-800">
-                            +
-                        </button>
-                    </div>
-                </td>
-
-                <!-- Base price -->
-                <td class="px-4 py-3 text-right text-gray-300">
-                    ₹{{ "{:.2f}".format(price) }}
-                </td>
-
-                <!-- GST -->
-                <td class="px-4 py-3 text-right">
-                    <span class="text-xs text-gray-500">{{ item.gst_percent }}%</span><br>
-                    <span class="text-xs text-gray-400">₹{{ "{:.2f}".format(gst_amt) }}</span>
-                </td>
-
-                <!-- Subtotal (base only, GST shown separately in totals) -->
-                <td class="px-4 py-3 text-right font-semibold text-white">
-                    ₹{{ "{:.2f}".format(subtotal) }}
-                </td>
-
-                <!-- Remove button -->
-                <td class="px-4 py-3 text-right">
-                    <form hx-post="{{ url_for('billing.remove_item') }}" hx-target="#cart-section" hx-swap="innerHTML"
-                        style="display:inline">
-                        <input type="hidden" name="product_id" value="{{ pid }}">
-                        <button type="submit" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20
-                           text-red-400 flex items-center justify-center transition-colors" title="Remove">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+<!-- ── Cart Table Area ────────────────────────────────────────── -->
+<div class="flex-1 min-h-0 flex flex-col mb-6 pro-card overflow-hidden">
+    <div class="overflow-y-auto flex-1">
+        <table class="pro-table">
+            <thead>
+                <tr>
+                    <th>Product Details</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-right">Rate</th>
+                    <th class="text-right">Total</th>
+                    <th class="w-16"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pid, item in cart.items() %}
+                {% set price = item.price | float %}
+                {% set qty = item.quantity %}
+                {% set subtotal = (price * qty) %}
+                {% set total_with_gst = subtotal + (subtotal * item.gst_percent / 100) %}
+                <tr>
+                    <td>
+                        <div class="flex items-start gap-3">
+                            <div>
+                                <p class="font-bold text-white text-sm">
+                                    {% if item.is_weighed %}⚖️ {% endif %}{{ item.name }}
+                                </p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span
+                                        class="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/10 uppercase tracking-tighter">{{
+                                        item.barcode }}</span>
+                                    {% if item.size or item.color %}
+                                    <span class="text-[10px] text-muted">{{ item.size }} / {{ item.color }}</span>
+                                    {% endif %}
+                                    {% if stock_map %}
+                                    {% set stock = stock_map.get(pid, 0) %}
+                                    {% if item.quantity >= stock %}
+                                    <span
+                                        class="text-[10px] font-bold text-red-400 bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">STOCK
+                                        LIMIT</span>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex items-center justify-center gap-4">
+                            <button hx-post="{{ url_for('billing.update_item') }}"
+                                hx-vals='{"variant_id": "{{ pid }}", "action": "decr"}' hx-target="#cart-section"
+                                class="w-8 h-8 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-all">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M20 12H4" stroke-width="2" />
+                                </svg>
+                            </button>
+                            <span class="text-lg font-bold text-white w-6 text-center tabular-nums">{{ qty }}</span>
+                            {% set stock = stock_map.get(pid, 0) if stock_map else 999 %}
+                            <button hx-post="{{ url_for('billing.update_item') }}"
+                                hx-vals='{"variant_id": "{{ pid }}", "action": "incr"}' hx-target="#cart-section" {% if
+                                qty>= stock %}disabled{% endif %}
+                                class="w-8 h-8 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white
+                                flex items-center justify-center transition-all disabled:opacity-20
+                                disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M12 4v16m8-8H4" stroke-width="2" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="text-right text-muted tabular-nums">₹{{ "{:,.2f}".format(price) }}</td>
+                    <td class="text-right font-bold text-white tabular-nums">₹{{ "{:,.2f}".format(subtotal) }}</td>
+                    <td>
+                        <button hx-post="{{ url_for('billing.remove_item') }}" hx-vals='{"variant_id": "{{ pid }}"}'
+                            hx-target="#cart-section" class="p-2 text-muted hover:text-red-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    stroke-width="2" />
                             </svg>
                         </button>
-                    </form>
-                </td>
-
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<!-- ── Totals ─────────────────────────────────────────────────── -->
-<div class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
-    <div class="space-y-2 text-sm">
-        <div class="flex justify-between text-gray-400">
-            <span>Subtotal (excl. GST)</span>
-            <span>₹{{ "{:.2f}".format(totals.subtotal | float) }}</span>
-        </div>
-
-        {% if promo_result and promo_result.applied %}
+{% if promo_result and promo_result.applied %}
+<!-- ── Applied Promotions ────────────────────────────────────── -->
+<div class="mb-6 space-y-2">
+    <p class="text-[10px] font-bold text-brand-400 uppercase tracking-widest px-1">Applied Promotions</p>
+    <div class="space-y-2">
         {% for entry in promo_result.applied %}
-        <div class="flex justify-between text-green-400 text-xs">
-            <span class="flex items-center gap-1.5">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                {{ entry.promo_name }} — {{ entry.description }}
-            </span>
-            <span class="font-semibold tabular-nums">−₹{{ "{:.2f}".format(entry.discount_amount | float) }}</span>
+        <div
+            class="flex items-center justify-between p-4 rounded-xl bg-brand-500/5 border border-brand-500/10 transition-all hover:bg-brand-500/10">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                            stroke-width="2" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-white">{{ entry.promo_name }}</p>
+                    <p class="text-[10px] text-muted uppercase tracking-tighter">{{ entry.description }}</p>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-brand-400">-₹{{ "{:,.2f}".format(entry.discount_amount | float) }}</p>
         </div>
         {% endfor %}
-        <div class="flex justify-between text-green-300 font-medium text-xs">
-            <span>Total Discount</span>
-            <span class="tabular-nums">−₹{{ "{:.2f}".format(promo_result.total_discount | float) }}</span>
-        </div>
-        {% set discounted_subtotal = promo_result.discounted_total %}
-        {% else %}
-        {% set discounted_subtotal = totals.subtotal %}
-        {% endif %}
+    </div>
+</div>
+{% endif %}
 
-        <div class="flex justify-between text-gray-400">
-            <span>GST</span>
-            <span>₹{{ "{:.2f}".format(totals.gst_total | float) }}</span>
+<!-- ── Cart Summary Footer (Sticky) ───────────────────────────── -->
+<div class="pro-card p-6 bg-slate-900/90 backdrop-blur border-brand-500/20 shadow-2xl">
+    {% set base_subtotal = totals.subtotal | float %}
+    {% set base_gst = totals.gst_total | float %}
+    {% set promo_discount = (promo_result.total_discount | float) if promo_result and promo_result.applied else 0.0 %}
+    {% set subtotal_after_promo = [0, base_subtotal - promo_discount] | max %}
+    {% set gst_after_promo = base_gst * (subtotal_after_promo / base_subtotal) if base_subtotal > 0 else 0 %}
+    {% set final_total = subtotal_after_promo + gst_after_promo %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-6">
+        <div>
+            <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Items</p>
+            <p class="text-xl font-bold text-white">{{ cart|length }} Unique SKUs</p>
         </div>
-        {% set final_total = discounted_subtotal | float + totals.gst_total | float %}
-        <div class="flex justify-between text-white font-bold text-base pt-2 border-t border-gray-800">
-            <span>Grand Total</span>
-            <span class="text-brand-400">₹{{ "{:.2f}".format(final_total) }}</span>
+        <div>
+            <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Gross Subtotal</p>
+            <p class="text-xl font-bold text-white">₹{{ "{:,.2f}".format(base_subtotal) }}</p>
         </div>
+        <div>
+            <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Taxes (GST)</p>
+            <p class="text-xl font-bold text-white">₹{{ "{:,.2f}".format(gst_after_promo) }}</p>
+        </div>
+        <div class="text-right">
+            <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Payable Amount</p>
+            <p class="text-3xl font-black text-emerald-400">₹{{ "{:,.2f}".format(final_total) }}</p>
+        </div>
+    </div>
+
+    <div class="flex gap-4">
+        <button id="clear-cart-btn" hx-post="{{ url_for('billing.new_sale') }}" hx-target="#cart-section"
+            class="btn-pro btn-danger px-6 flex-shrink-0" onclick="return confirm('Discard all items in cart?');">
+            Clear Cart
+        </button>
+        <button id="complete-sale-btn" onclick="openPaymentModal()"
+            class="btn-pro btn-primary flex-1 text-lg py-4 shadow-[0_10px_30px_rgba(99,102,241,0.3)]">
+            <span>Complete Sale & Invoice</span>
+            <span class="opacity-50 text-xs ml-2">(F9)</span>
+        </button>
     </div>
 </div>
 
+<!-- ── Payment Modal Redesign ── -->
+<div id="payment-modal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onclick="closePaymentModal()"></div>
+    <div
+        class="relative pro-card w-full max-w-2xl bg-slate-900 border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+            <div>
+                <h3 class="text-2xl font-black text-white">Checkout Terminal</h3>
+                <p class="text-xs text-muted mt-1 uppercase tracking-widest font-bold">Session: {{ current_user.name }}
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-muted font-bold uppercase mb-1">Total Due</p>
+                <p class="text-4xl font-black text-brand-400" id="total-due-display">₹{{ "{:,.2f}".format(final_total)
+                    }}</p>
+            </div>
+        </div>
 
-<!-- ── Complete Sale ──────────────────────────────────────────── -->
-<!-- ── Complete Sale / Pay ────────────────────────────────────── -->
-<button id="complete-sale-btn" type="button" onclick="openPaymentModal()" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold
-       text-base rounded-xl transition-colors focus:outline-none
-       focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-       focus:ring-offset-gray-950">
-    Pay & Complete &nbsp;
-    <span class="text-brand-300 font-normal text-sm">
-        (₹{{ "{:.2f}".format(totals.grand_total | float) }})
-    </span>
-</button>
+        <form action="{{ url_for('billing.complete') }}" method="POST" id="payment-form"
+            class="flex-1 overflow-y-auto p-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="base-subtotal" value="{{ " {:.2f}".format(base_subtotal) }}">
+            <input type="hidden" id="base-gst" value="{{ " {:.2f}".format(base_gst) }}">
+            <input type="hidden" id="promo-discount" value="{{ " {:.2f}".format(promo_discount) }}">
+            <input type="hidden" name="total_due" id="total-due" value="{{ " {:.2f}".format(final_total) }}">
 
-<!-- ── Payment Modal (AlpineJS/Vanilla) ─────────────────────── -->
-<div id="payment-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
-    aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"
-            onclick="closePaymentModal()"></div>
-
-        <!-- Modal panel -->
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div
-            class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-700">
-
-            <form action="{{ url_for('billing.complete') }}" method="POST" id="payment-form">
-                <div class="bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-white mb-4" id="modal-title">
-                        Confirm Payment
-                    </h3>
-
-                    <div class="mb-4 p-4 bg-gray-900 rounded-lg flex justify-between items-center">
-                        <span class="text-gray-400 text-sm uppercase font-semibold">Total Due</span>
-                        <span class="text-2xl font-bold text-white">₹{{ "{:.2f}".format(totals.grand_total | float)
-                            }}</span>
-                        <input type="hidden" id="total-due" value="{{ totals.grand_total }}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Left Column: Discounts & Loyalty -->
+                <div class="space-y-6">
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-muted uppercase tracking-widest">Manual
+                            Adjustment</label>
+                        <div class="flex gap-2">
+                            <select name="discount_type" id="discount-type" onchange="updatePaymentStatus()"
+                                class="bg-gray-950 border border-white/10 rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-brand-500">
+                                <option value="percent">%</option>
+                                <option value="amount">₹</option>
+                            </select>
+                            <input type="number" step="0.01" min="0" name="discount_value" id="discount-value"
+                                oninput="updatePaymentStatus()" placeholder="Discount Value"
+                                class="flex-1 bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-brand-500">
+                        </div>
                     </div>
+
+                    {% if customer %}
+                    <div class="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                        <label
+                            class="block text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-3">Redeem
+                            Points (Max: {{ customer.points }})</label>
+                        <div class="flex gap-4 items-center">
+                            <input type="number" step="1" name="payment_loyalty" id="pay-loyalty"
+                                max="{{ customer.points }}" oninput="updatePaymentStatus()"
+                                class="flex-1 bg-gray-950 border border-emerald-500/20 rounded-xl px-4 py-3 text-lg font-bold text-emerald-400 outline-none">
+                            <span class="text-xs text-muted font-bold">PTS</span>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <div class="space-y-4">
-                        <!-- Cash -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Cash</label>
-                            <input type="number" step="0.01" name="payment_cash" id="pay-cash" placeholder="0.00"
-                                class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                                oninput="updatePaymentStatus()">
+                        <label class="block text-[10px] font-bold text-muted uppercase tracking-widest">Gift
+                            Voucher</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="gift-code" placeholder="Code"
+                                class="flex-1 bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none">
+                            <button type="button" onclick="checkGiftCard()"
+                                class="px-4 py-3 bg-gray-800 rounded-xl border border-white/10 text-xs font-bold text-white hover:bg-gray-700 transition-colors">Apply</button>
                         </div>
-
-                        <!-- Card -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Card / UPI</label>
-                            <input type="number" step="0.01" name="payment_card" id="pay-card" placeholder="0.00"
-                                class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                                oninput="updatePaymentStatus()">
-                        </div>
-
-                        <!-- Other -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Other (UPI/Wallet)</label>
-                            <input type="number" step="0.01" name="payment_upi" id="pay-upi" placeholder="0.00"
-                                class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                                oninput="updatePaymentStatus()">
-                        </div>
-
-                        <!-- Loyalty Points -->
-                        {% if customer %}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1 flex justify-between">
-                                <span>Loyalty Points</span>
-                                <span class="text-brand-400 text-xs">Available: {{ customer.points }}</span>
-                            </label>
-                            <div class="relative">
-                                <input type="number" step="1" name="payment_loyalty" id="pay-loyalty" placeholder="0"
-                                    max="{{ customer.points }}"
-                                    class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                                    oninput="updatePaymentStatus()">
-                                <div class="absolute right-3 top-2.5 text-xs text-gray-500">Pts</div>
-                            </div>
-                            <p class="text-[10px] text-gray-500 mt-1">1 Point = ₹1.00</p>
-                        </div>
-                        {% endif %}
-
-                        <!-- Gift Card -->
-                        <div class="p-3 bg-gray-900 rounded border border-gray-700">
-                            <label class="block text-sm font-medium text-gray-400 mb-2">Gift Card</label>
-                            <div class="flex gap-2 mb-2">
-                                <input type="text" name="gift_card_code" id="gift-code" placeholder="Enter Code"
-                                    class="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-brand-500">
-                                <button type="button" onclick="checkGiftCard()"
-                                    class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-xs text-white rounded border border-gray-600">Check</button>
-                            </div>
-                            <div id="gift-card-status" class="text-xs mb-2 h-4"></div>
-
-                            <input type="number" step="0.01" name="payment_gift" id="pay-gift"
-                                placeholder="Redeem Amount"
-                                class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled oninput="updatePaymentStatus()">
-                        </div>
-                    </div>
-
-                    <!-- Remaining / Change -->
-                    <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between items-center">
-                        <span id="payment-status-label" class="text-sm font-medium text-gray-400">Remaining</span>
-                        <span id="payment-status-value" class="text-xl font-bold text-red-400">₹{{
-                            "{:.2f}".format(totals.grand_total | float) }}</span>
+                        <div id="gift-card-status" class="text-[10px] h-4 leading-none"></div>
+                        <input type="number" step="0.01" name="payment_gift" id="pay-gift" disabled
+                            oninput="updatePaymentStatus()" class="hidden">
                     </div>
                 </div>
 
-                <div class="bg-gray-700 px-4 py-3 sm:px-6 flex flex-row-reverse gap-2">
+                <!-- Right Column: Payments -->
+                <div class="space-y-6">
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-muted uppercase tracking-widest">Cash
+                            Amount</label>
+                        <input type="number" step="0.01" name="payment_cash" id="pay-cash"
+                            oninput="updatePaymentStatus()"
+                            class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-4 text-2xl font-bold text-white outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10">
+                    </div>
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-muted uppercase tracking-widest">Card /
+                            POS</label>
+                        <input type="number" step="0.01" name="payment_card" id="pay-card"
+                            oninput="updatePaymentStatus()"
+                            class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-4 text-2xl font-bold text-white outline-none focus:border-brand-500">
+                    </div>
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-muted uppercase tracking-widest">UPI / QR
+                            Scan</label>
+                        <input type="number" step="0.01" name="payment_upi" id="pay-upi" oninput="updatePaymentStatus()"
+                            class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-4 text-2xl font-bold text-white outline-none focus:border-brand-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
+                <div>
+                    <p id="payment-status-label" class="text-[10px] font-bold text-muted uppercase tracking-widest">
+                        Remaining Balance</p>
+                    <p id="payment-status-value" class="text-3xl font-black text-red-500 tracking-tight">₹{{
+                        "{:,.2f}".format(final_total) }}</p>
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" onclick="closePaymentModal()"
+                        class="px-8 py-4 text-sm font-bold text-muted hover:text-white transition-colors">Dismiss</button>
                     <button type="submit" id="confirm-payment-btn" disabled
-                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="btn-pro btn-primary px-10 text-lg shadow-[0_10px_30px_rgba(16,185,129,0.2)] disabled:opacity-30 disabled:grayscale">
                         Complete Sale
                     </button>
-                    <button type="button" onclick="closePaymentModal()"
-                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:bg-gray-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
-
-<script>
-    function openPaymentModal() {
-        document.getElementById('payment-modal').classList.remove('hidden');
-        const cashInput = document.getElementById('pay-cash');
-        const totalDue = parseFloat(document.getElementById('total-due').value) || 0;
-
-        // Auto-fill cash if fields empty
-        const cardVal = parseFloat(document.getElementById('pay-card').value) || 0;
-        const upiVal = parseFloat(document.getElementById('pay-upi').value) || 0;
-        const loyaltyVal = parseFloat(document.getElementById('pay-loyalty')?.value) || 0;
-        const giftVal = parseFloat(document.getElementById('pay-gift').value) || 0;
-        const cashVal = parseFloat(cashInput.value) || 0;
-
-        if (cardVal === 0 && upiVal === 0 && loyaltyVal === 0 && giftVal === 0 && cashVal === 0) {
-            cashInput.value = totalDue.toFixed(2);
-        }
-
-        // Focus usually fails if modal not fully visible yet, so slight delay or just try
-        setTimeout(() => {
-            cashInput.focus();
-            cashInput.select();
-        }, 50);
-
-        updatePaymentStatus();
-    }
-
-    function closePaymentModal() {
-        document.getElementById('payment-modal').classList.add('hidden');
-    }
-
-    function updatePaymentStatus() {
-        const totalDue = parseFloat(document.getElementById('total-due').value) || 0;
-        const cash = parseFloat(document.getElementById('pay-cash').value) || 0;
-        const card = parseFloat(document.getElementById('pay-card').value) || 0;
-        const upi = parseFloat(document.getElementById('pay-upi').value) || 0;
-        const loyalty = parseFloat(document.getElementById('pay-loyalty')?.value) || 0;
-        const gift = parseFloat(document.getElementById('pay-gift').value) || 0;
-
-        const totalPaid = cash + card + upi + loyalty + gift;
-        // Use small epsilon for float comparison logic
-        const remaining = totalDue - totalPaid;
-
-        const label = document.getElementById('payment-status-label');
-        const value = document.getElementById('payment-status-value');
-        const btn = document.getElementById('confirm-payment-btn');
-
-        if (remaining > 0.05) { // Allow tiny float diff
-            // Underpaid
-            label.textContent = "Remaining";
-            label.className = "text-sm font-medium text-gray-400";
-            value.textContent = "₹" + remaining.toFixed(2);
-            value.className = "text-xl font-bold text-red-400";
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            // Paid or Overpaid
-            const change = Math.abs(remaining);
-            label.textContent = "Change Due";
-            label.className = "text-sm font-medium text-brand-400";
-            value.textContent = "₹" + change.toFixed(2);
-            value.className = "text-xl font-bold text-brand-400";
-            btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    }
-
-    function checkGiftCard() {
-        const code = document.getElementById('gift-code').value.trim();
-        const statusDiv = document.getElementById('gift-card-status');
-        const payInput = document.getElementById('pay-gift');
-
-        if (!code) return;
-
-        statusDiv.innerHTML = '<span class="text-gray-400">Checking...</span>';
-
-        fetch(`/customers/giftcard/check?code=${code}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.valid) {
-                    statusDiv.innerHTML = `<span class="text-green-400">Balance: ₹${data.balance}</span>`;
-                    payInput.disabled = false;
-                    payInput.placeholder = `Max ₹${data.balance}`;
-                    payInput.focus();
-                } else {
-                    statusDiv.innerHTML = `<span class="text-red-400">${data.error}</span>`;
-                    payInput.disabled = true;
-                    payInput.value = '';
-                    updatePaymentStatus();
-                }
-            })
-            .catch(() => {
-                statusDiv.innerHTML = '<span class="text-red-400">Error checking card</span>';
-            });
-    }
-</script>
 
 {% else %}
 
-<!-- ── Empty cart state ───────────────────────────────────────── -->
-<div class="bg-gray-900 border border-gray-800 rounded-xl flex flex-col
-            items-center justify-center py-20 text-center">
-    <div class="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center mb-4">
-        <svg class="w-7 h-7 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+<!-- ── Empty State ── -->
+<div class="flex-1 flex flex-col items-center justify-center pro-card p-20 text-center bg-brand-500/5">
+    <div class="w-20 h-20 rounded-full bg-brand-500/10 flex items-center justify-center mb-6 text-brand-400">
+        <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                stroke-width="2" />
         </svg>
     </div>
-    <p class="text-gray-400 font-medium mb-1">Cart is empty</p>
-    <p class="text-gray-600 text-sm">Scan a barcode to add the first item</p>
+    <h3 class="text-xl font-bold text-white mb-2">Ready to Scan</h3>
+    <p class="text-muted max-w-xs mx-auto">Scanning an item will automatically build the cart and calculate taxes.</p>
 </div>
 
 {% endif %}

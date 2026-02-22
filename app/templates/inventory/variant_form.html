@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block page_title %}Edit Variant{% endblock %}
+{% block page_subtitle %}{{ product.name }} - {{ variant.size }}/{{ variant.color }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+    <a href="{{ url_for('inventory.variants', product_id=product.id) }}"
+        class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Variants
+    </a>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8">
+        <form method="POST" action="{{ form_action }}" class="space-y-5">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="size" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Size</label>
+                    <input id="size" name="size" type="text" value="{{ form_data.get('size', '') }}"
+                        class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('size') else 'border-gray-700' }}">
+                    {% if errors.get('size') %}<p class="mt-1 text-xs text-red-400">{{ errors.size }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="color" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Color</label>
+                    <input id="color" name="color" type="text" value="{{ form_data.get('color', '') }}"
+                        class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('color') else 'border-gray-700' }}">
+                    {% if errors.get('color') %}<p class="mt-1 text-xs text-red-400">{{ errors.color }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="barcode" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Barcode</label>
+                <input id="barcode" name="barcode" type="text" value="{{ form_data.get('barcode', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('barcode') else 'border-gray-700' }}">
+                {% if errors.get('barcode') %}<p class="mt-1 text-xs text-red-400">{{ errors.barcode }}</p>{% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="price" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Price</label>
+                    <input id="price" name="price" type="number" min="0.01" step="0.01" value="{{ form_data.get('price', '') }}"
+                        class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('price') else 'border-gray-700' }}">
+                    {% if errors.get('price') %}<p class="mt-1 text-xs text-red-400">{{ errors.price }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="stock" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Stock</label>
+                    <input id="stock" name="stock" type="number" min="0" step="1" value="{{ form_data.get('stock', '') }}"
+                        class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('stock') else 'border-gray-700' }}">
+                    {% if errors.get('stock') %}<p class="mt-1 text-xs text-red-400">{{ errors.stock }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="sku" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">SKU (optional)</label>
+                <input id="sku" name="sku" type="text" value="{{ form_data.get('sku', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('sku') else 'border-gray-700' }}">
+                {% if errors.get('sku') %}<p class="mt-1 text-xs text-red-400">{{ errors.sku }}</p>{% endif %}
+            </div>
+
+            {% if errors.get('size_color') %}
+            <p class="text-xs text-red-400">{{ errors.size_color }}</p>
+            {% endif %}
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit"
+                    class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                    Save Variant
+                </button>
+                <a href="{{ url_for('inventory.variants', product_id=product.id) }}"
+                    class="px-5 py-2.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

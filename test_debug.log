@@ -1,0 +1,63 @@
+=== START TEST ===
+LOGIN STATUS: 200
+LOGIN URL: http://localhost/
+SESSION OPEN STATUS: 200
+SESSION OPEN URL: http://localhost/billing/
+ADD 1 STATUS: 200, URL: http://localhost/billing/add-item
+ADD 2 STATUS: 200, URL: http://localhost/billing/add-item
+ADD 3 STATUS: 200, URL: http://localhost/billing/add-item
+COMPLETE STATUS: 200
+COMPLETE URL: http://localhost/billing/invoice/1
+COMPLETE FINAL DATA: <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice 2026-0001 — Mall Billing System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.onload = function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoprint')) {
+                window.print();
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+            }
+
+            .print-shadow {
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-start justify-center py-10 px-4 print:p-0 print:bg-white">
+
+    <!-- ── Print / Back toolbar ─────────────────────────────────── -->
+    <div class="no-print fixed top-6 right-6 flex flex-col gap-3 z-50">
+        <a href="/billing/" class="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm
+              font-medium rounded-full shadow-lg transition-all hover:shadow-xl flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            New Sale
+        </a>
+        <button onclick="window.print()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm
+             font-semibold rounded-full shadow-lg transition-all hover:shadow-xl flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" 

@@ -21,24 +21,39 @@ from app.promotions.engine import evaluate_promotions, PromoResult
 # ── Fixtures ──────────────────────────────────────────────────────
 
 @pytest.fixture(scope='function')
-def client():
-    app = create_app('testing')
+def client(app):
+    """Uses the global app fixture and seeds admin user."""
     with app.app_context():
-        db.create_all()
+        # setup_database (from conftest) already ran db.create_all()
         admin = User(username='admin', name='Admin', role=RoleEnum.admin)
         admin.set_password('admin123')
         db.session.add(admin)
         db.session.commit()
-        yield app.test_client()
-        db.drop_all()
+        with app.test_client() as client:
+            yield client
 
+
+from app.inventory.models import Product, ProductVariant
 
 def make_product(name='Rice', price='100.00', gst=5, stock=100):
     p = Product(
-        name=name, barcode=f'BC{name[:4].upper()}',
+        name=name, barcode=f'LEGACY-{name[:4].upper()}',
         price=Decimal(price), stock=stock, gst_percent=gst, is_active=True,
     )
     db.session.add(p)
+    db.session.commit()
+    
+    # Also create a default variant for billing routes that require it
+    v = ProductVariant(
+        product_id=p.id,
+        size='STD',
+        color='Default',
+        barcode=f'BC{name[:4].upper()}',
+        price=Decimal(price),
+        stock=stock,
+        is_active=True
+    )
+    db.session.add(v)
     db.session.commit()
     return p
 
@@ -59,6 +74,7 @@ def make_promo(**kwargs):
 def cart_from(product, qty=1):
     return {
         str(product.id): {
+            'product_id': product.id,
             'name': product.name,
             'price': str(product.price),
             'quantity': qty,

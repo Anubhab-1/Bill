@@ -1,0 +1,53 @@
+<div class="space-y-6">
+    <div class="flex items-center justify-between mb-8">
+        <h2
+            class="text-lg font-black text-white italic tracking-tight underline decoration-brand-500/50 decoration-4 underline-offset-8">
+            {{ 'EDIT_CUSTOMER_PROFILE' if customer else 'REGISTER_NEW_ENTITY' }}
+        </h2>
+        <button @click="open = false" class="text-muted hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" />
+            </svg>
+        </button>
+    </div>
+
+    <form {% if customer %} hx-post="{{ url_for('customers.edit_customer', customer_id=customer.id) }}" {% else %}
+        hx-post="{{ url_for('customers.create') }}" {% endif %} hx-target="#customer-form-response" class="space-y-6">
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div>
+            <label class="block text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3">Full Legal
+                Name</label>
+            <input type="text" name="name" required value="{{ customer.name if customer else '' }}"
+                placeholder="Enter full name"
+                class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500 outline-none transition-all">
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3">Primary Contact
+                (Phone)</label>
+            <input type="text" name="phone" required value="{{ customer.phone if customer else '' }}"
+                placeholder="+91 00000 00000"
+                class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-3 font-mono text-sm text-white focus:border-brand-500 outline-none transition-all">
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-3">Electronic Mail
+                (Optional)</label>
+            <input type="email" name="email" value="{{ customer.email if customer else '' }}"
+                placeholder="email@example.com"
+                class="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500 outline-none transition-all">
+        </div>
+
+        <div id="customer-form-response"></div>
+
+        <div class="flex gap-4 pt-4">
+            <button type="button" @click="open = false"
+                class="flex-1 px-4 py-3 rounded-xl bg-gray-800 text-sm font-bold text-gray-400 hover:bg-gray-700 transition-colors">Abort</button>
+            <button type="submit" class="flex-1 btn-pro btn-primary py-3 font-black tracking-widest uppercase">
+                {{ 'Update Record' if customer else 'Commit Entry' }}
+            </button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block page_title %}Variants - {{ product.name }}{% endblock %}
+{% block page_subtitle %}Manage size/color variants{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-xl font-semibold text-white">{{ product.name }}</h2>
+        <p class="text-sm text-gray-400 mt-1">
+            Brand: {{ product.brand or '-' }} | Category: {{ product.category or '-' }} | Total Stock: {{ product.total_stock }}
+        </p>
+    </div>
+    <a href="{{ url_for('inventory.index') }}"
+        class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors">
+        Back to Products
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-800 text-left">
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Size</th>
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Color</th>
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Barcode</th>
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Price</th>
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Stock</th>
+                    <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Edit / Label / Delete</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800/60">
+                {% for variant in variants %}
+                <tr class="hover:bg-gray-800/30 transition-colors">
+                    <td class="px-5 py-4 text-gray-100 font-medium">{{ variant.size }}</td>
+                    <td class="px-5 py-4 text-gray-300">{{ variant.color }}</td>
+                    <td class="px-5 py-4">
+                        <span class="font-mono text-xs text-gray-300 bg-gray-800 px-2 py-1 rounded">{{ variant.barcode }}</span>
+                    </td>
+                    <td class="px-5 py-4 text-right text-gray-200">{{ "%.2f"|format(variant.price|float) }}</td>
+                    <td class="px-5 py-4 text-right text-gray-200">{{ variant.stock }}</td>
+                    <td class="px-5 py-4 text-right">
+                        <div class="inline-flex items-center gap-2">
+                            <a href="{{ url_for('inventory.edit_variant', product_id=product.id, variant_id=variant.id) }}"
+                                class="px-3 py-1.5 text-xs font-medium text-blue-300 bg-blue-900/30 hover:bg-blue-900/50 rounded-lg transition-colors border border-blue-800">
+                                Edit
+                            </a>
+                            <a href="{{ url_for('inventory.print_variant_label', variant_id=variant.id) }}" target="_blank"
+                                class="px-3 py-1.5 text-xs font-medium text-emerald-300 bg-emerald-900/30 hover:bg-emerald-900/50 rounded-lg transition-colors border border-emerald-800">
+                                Print Label
+                            </a>
+                            <form method="POST" action="{{ url_for('inventory.delete_variant', product_id=product.id, variant_id=variant.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit"
+                                    onclick="return confirm('Delete variant {{ variant.size }}/{{ variant.color }}?');"
+                                    class="px-3 py-1.5 text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-5 py-10 text-center text-gray-500">
+                        No active variants yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 class="text-sm font-semibold text-white mb-4">Add Variant</h3>
+        <form method="POST" action="{{ url_for('inventory.add_variant', product_id=product.id) }}" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label for="size" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Size</label>
+                <input id="size" name="size" type="text" value="{{ form_data.get('size', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('size') else 'border-gray-700' }}">
+                {% if errors.get('size') %}<p class="mt-1 text-xs text-red-400">{{ errors.size }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="color" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Color</label>
+                <input id="color" name="color" type="text" value="{{ form_data.get('color', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('color') else 'border-gray-700' }}">
+                {% if errors.get('color') %}<p class="mt-1 text-xs text-red-400">{{ errors.color }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="barcode" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Barcode</label>
+                <input id="barcode" name="barcode" type="text" value="{{ form_data.get('barcode', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('barcode') else 'border-gray-700' }}">
+                {% if errors.get('barcode') %}<p class="mt-1 text-xs text-red-400">{{ errors.barcode }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="price" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Price</label>
+                <input id="price" name="price" type="number" min="0.01" step="0.01" value="{{ form_data.get('price', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('price') else 'border-gray-700' }}">
+                {% if errors.get('price') %}<p class="mt-1 text-xs text-red-400">{{ errors.price }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="stock" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Stock</label>
+                <input id="stock" name="stock" type="number" min="0" step="1" value="{{ form_data.get('stock', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('stock') else 'border-gray-700' }}">
+                {% if errors.get('stock') %}<p class="mt-1 text-xs text-red-400">{{ errors.stock }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="sku" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">SKU (optional)</label>
+                <input id="sku" name="sku" type="text" value="{{ form_data.get('sku', '') }}"
+                    class="w-full bg-gray-800 border rounded-lg px-3 py-2.5 text-sm text-white {{ 'border-red-500' if errors.get('sku') else 'border-gray-700' }}">
+                {% if errors.get('sku') %}<p class="mt-1 text-xs text-red-400">{{ errors.sku }}</p>{% endif %}
+            </div>
+            {% if errors.get('size_color') %}
+            <p class="text-xs text-red-400">{{ errors.size_color }}</p>
+            {% endif %}
+            <button type="submit"
+                class="w-full px-4 py-2.5 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-semibold text-white transition-colors">
+                Add Variant
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

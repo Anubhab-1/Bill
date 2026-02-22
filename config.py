@@ -1,8 +1,16 @@
 import os
 from datetime import timedelta
-from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
-load_dotenv()
+
+def _database_url_from_env():
+    db_url = os.environ.get('DATABASE_URL')
+    if not db_url:
+        raise RuntimeError('DATABASE_URL environment variable is not set.')
+    if not db_url.startswith('postgresql://'):
+        raise RuntimeError('DATABASE_URL must start with postgresql://')
+    return db_url
+
 
 class Config:
     """Base configuration shared across all environments."""
@@ -22,27 +30,20 @@ class Config:
     # Feature Flags (Default)
     CLOUD_DEMO = False
     LOCAL_PRODUCTION = False
+    ALLOW_SCHEMA_FIX_ROUTE = os.environ.get('ALLOW_SCHEMA_FIX_ROUTE', 'false').lower() == 'true'
 
 class DevelopmentConfig(Config):
     """Development environment configuration."""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL',
-        f'sqlite:///{os.path.join(os.getcwd(), "mall.db")}'
-    )
+    SQLALCHEMY_DATABASE_URI = _database_url_from_env()
 
 class ProductionConfig(Config):
     """Production environment configuration."""
     DEBUG = False
-    
-    # Correct PostgreSQL scheme and accessing env var
-    _db_url = os.environ.get('DATABASE_URL')
-    if _db_url and _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
-    
-    SQLALCHEMY_DATABASE_URI = _db_url or 'postgresql://postgres:password@localhost:5432/mall_billing_prod'
 
-    # Ensure SECRET_KEY is set
+    SQLALCHEMY_DATABASE_URI = _database_url_from_env()
+
+    # SECRET_KEY will be verified in create_app()
     SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Session Cookie Security
@@ -58,10 +59,12 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing environment configuration."""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = _database_url_from_env()
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "poolclass": NullPool
+    }
     WTF_CSRF_ENABLED = False
-    SESSION_COOKIE_SECURE = False
-    SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't use the prod pool settings
 
 config = {
     'development': DevelopmentConfig,

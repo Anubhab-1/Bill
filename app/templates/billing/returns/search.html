@@ -22,6 +22,7 @@
         </div>
 
         <form method="POST" action="{{ url_for('billing.returns_search') }}" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label for="query" class="block text-sm font-medium text-gray-400 mb-2">
                     Invoice Number

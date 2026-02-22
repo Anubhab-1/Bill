@@ -18,6 +18,7 @@ class User(db.Model):
     username      = db.Column(db.String(64), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     role          = db.Column(db.Enum(RoleEnum), nullable=False, default=RoleEnum.cashier)
+    is_active     = db.Column(db.Boolean, nullable=False, default=True)
     created_at    = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # ── Password helpers ──────────────────────────────────────────
@@ -33,6 +34,18 @@ class User(db.Model):
     @property
     def is_admin(self) -> bool:
         return self.role == RoleEnum.admin
+
+    @property
+    def is_authenticated(self) -> bool:
+        # Flask-Login-style compatibility for templates.
+        return True
+
+    @property
+    def is_anonymous(self) -> bool:
+        return False
+
+    def get_id(self) -> str:
+        return str(self.id)
 
     def __repr__(self) -> str:
         return f"<User {self.username!r} role={self.role.value!r}>"

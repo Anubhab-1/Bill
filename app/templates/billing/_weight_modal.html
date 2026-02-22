@@ -27,10 +27,11 @@ On submit -> POST /billing/add-weighed-item -> returns refreshed _cart.html.
         To integrate: fire a JS event 'scale-reading' with detail.weight_kg
         and the listener below will auto-fill the input. #}
 
-        <form hx-post="{{ url_for('billing.add_weighed_item') }}" hx-target="#cart-panel" hx-swap="innerHTML"
+        <form hx-post="{{ url_for('billing.add_weighed_item') }}" hx-target="#cart-section" hx-swap="innerHTML"
             hx-on::after-request="document.getElementById('weight-modal-overlay').remove()" class="space-y-4">
 
-            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="variant_id" value="{{ variant.id }}">
 
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-1.5">
