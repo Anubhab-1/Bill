@@ -225,14 +225,36 @@ def register_commands(app):
         # This allows the app to self-initialize on a fresh Render deployment
         # without needing shell access (a Pro-only feature).
         from app.auth.models import User, RoleEnum
+        reset_password = os.environ.get('ADMIN_PASSWORD_RESET', '').strip()
+
         if User.query.count() == 0:
             click.echo("No users found. Seeding default admin...")
+            new_pw = reset_password or 'Admin@2026'
             admin = User(name='Administrator', username='admin', role=RoleEnum.admin)
-            admin.set_password('Admin@2026')
+            admin.set_password(new_pw)
             db.session.add(admin)
             db.session.commit()
-            click.echo("✅  Default admin created. Username: admin | Password: Admin@2026")
+            click.echo(f"✅  Default admin created. Username: admin | Password: {new_pw}")
             click.echo("⚠️   IMPORTANT: Change the admin password after first login!")
+
+        elif reset_password:
+            # If ADMIN_PASSWORD_RESET env var is set, forcefully reset the admin's password.
+            # This is the safe way to recover access on Render free tier (no shell access).
+            admin = User.query.filter_by(username='admin').first()
+            if admin:
+                admin.set_password(reset_password)
+                if not admin.is_active:
+                    admin.is_active = True
+                db.session.commit()
+                click.echo(f"✅  Admin password has been reset via ADMIN_PASSWORD_RESET env var.")
+                click.echo(f"⚠️   Remove the ADMIN_PASSWORD_RESET env var from Render after logging in!")
+            else:
+                click.echo("ℹ️  ADMIN_PASSWORD_RESET set but no 'admin' user found. Creating one...")
+                admin = User(name='Administrator', username='admin', role=RoleEnum.admin)
+                admin.set_password(reset_password)
+                db.session.add(admin)
+                db.session.commit()
+                click.echo(f"✅  Admin user created with the provided password.")
 
     from app.seed_history import seed_history
     app.cli.add_command(seed_history)
