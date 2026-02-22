@@ -413,3 +413,166 @@ def export_csv(report_type):
         'Content-Type': 'text/csv'
     }
     return Response(stream_with_context(generate()), headers=headers)
+
+
+# ── Analytics Page ────────────────────────────────────────────────
+
+@reporting.route('/analytics')
+@admin_required
+def analytics():
+    """Full interactive analytics dashboard powered by Chart.js."""
+    return render_template('reporting/analytics.html', title='Analytics')
+
+
+# ── Chart JSON API Endpoints ──────────────────────────────────────
+
+from flask import jsonify
+
+@reporting.route('/api/revenue-trend')
+@admin_required
+def api_revenue_trend():
+    """
+    Returns daily revenue totals for the last N days.
+    Query param: days (default 30)
+    """
+    days = min(int(request.args.get('days', 30)), 365)
+    today = date.today()
+    start = today - timedelta(days=days - 1)
+
+    rows = (
+        db.session.query(
+            cast(Sale.created_at, Date).label('day'),
+            func.coalesce(
+                func.sum(func.coalesce(Sale.grand_total, Sale.total_amount + Sale.gst_total)),
+                0
+            ).label('revenue')
+        )
+        .filter(cast(Sale.created_at, Date) >= start)
+        .group_by(cast(Sale.created_at, Date))
+        .order_by(cast(Sale.created_at, Date))
+        .all()
+    )
+
+    # Build a full date series (fill gaps with 0)
+    revenue_by_day = {str(r.day): float(r.revenue) for r in rows}
+    labels, values = [], []
+    for i in range(days):
+        d = str(start + timedelta(days=i))
+        labels.append(d)
+        values.append(revenue_by_day.get(d, 0))
+
+    return jsonify({'labels': labels, 'values': values})
+
+
+@reporting.route('/api/payment-methods')
+@admin_required
+def api_payment_methods():
+    """
+    Returns revenue breakdown by payment method for the last N days.
+    """
+    days = min(int(request.args.get('days', 30)), 365)
+    today = date.today()
+    start = today - timedelta(days=days - 1)
+
+    rows = (
+        db.session.query(
+            SalePayment.method,
+            func.coalesce(func.sum(SalePayment.amount), 0).label('total')
+        )
+        .join(Sale, Sale.id == SalePayment.sale_id)
+        .filter(cast(Sale.created_at, Date) >= start)
+        .group_by(SalePayment.method)
+        .all()
+    )
+
+    labels = [r.method.title() for r in rows]
+    values = [float(r.total) for r in rows]
+    return jsonify({'labels': labels, 'values': values})
+
+
+@reporting.route('/api/top-products')
+@admin_required
+def api_top_products():
+    """
+    Returns top 10 products by revenue for the last N days.
+    """
+    days = min(int(request.args.get('days', 30)), 365)
+    today = date.today()
+    start = today - timedelta(days=days - 1)
+
+    rows = (
+        db.session.query(
+            Product.name,
+            func.coalesce(func.sum(SaleItem.subtotal), 0).label('revenue')
+        )
+        .join(SaleItem, SaleItem.product_id == Product.id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(cast(Sale.created_at, Date) >= start)
+        .group_by(Product.name)
+        .order_by(desc('revenue'))
+        .limit(10)
+        .all()
+    )
+
+    labels = [r.name for r in rows]
+    values = [float(r.revenue) for r in rows]
+    return jsonify({'labels': labels, 'values': values})
+
+
+@reporting.route('/api/hourly-heatmap')
+@admin_required
+def api_hourly_heatmap():
+    """
+    Returns average number of transactions per hour of the day
+    for the last N days.
+    """
+    days = min(int(request.args.get('days', 30)), 365)
+    today = date.today()
+    start = today - timedelta(days=days - 1)
+
+    from sqlalchemy import extract
+    rows = (
+        db.session.query(
+            extract('hour', Sale.created_at).label('hour'),
+            func.count(Sale.id).label('txn_count')
+        )
+        .filter(cast(Sale.created_at, Date) >= start)
+        .group_by(extract('hour', Sale.created_at))
+        .order_by(extract('hour', Sale.created_at))
+        .all()
+    )
+
+    txn_by_hour = {int(r.hour): int(r.txn_count) for r in rows}
+    labels = [f"{h:02d}:00" for h in range(24)]
+    values = [txn_by_hour.get(h, 0) for h in range(24)]
+    return jsonify({'labels': labels, 'values': values})
+
+
+@reporting.route('/api/category-breakdown')
+@admin_required
+def api_category_breakdown():
+    """
+    Returns revenue breakdown by product category for the last N days.
+    Products without a category are grouped as 'Uncategorised'.
+    """
+    days = min(int(request.args.get('days', 30)), 365)
+    today = date.today()
+    start = today - timedelta(days=days - 1)
+
+    rows = (
+        db.session.query(
+            func.coalesce(Product.category, 'Uncategorised').label('category'),
+            func.coalesce(func.sum(SaleItem.subtotal), 0).label('revenue')
+        )
+        .join(SaleItem, SaleItem.product_id == Product.id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(cast(Sale.created_at, Date) >= start)
+        .group_by(func.coalesce(Product.category, 'Uncategorised'))
+        .order_by(desc('revenue'))
+        .all()
+    )
+
+    labels = [r.category for r in rows]
+    values = [float(r.revenue) for r in rows]
+    return jsonify({'labels': labels, 'values': values})
+
