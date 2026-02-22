@@ -586,6 +586,7 @@ def complete():
             gst_total += line_gst
 
             sale_items.append(SaleItem(
+                product_id=int(line['variant'].product_id),
                 variant_id=int(line['variant'].id),
                 quantity=line['qty'],
                 price_at_sale=line['price'],

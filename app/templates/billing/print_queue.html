@@ -23,7 +23,7 @@
                 <div>
                     <h3 class="text-white font-bold text-lg">{{ sale.invoice_number }}</h3>
                     <p class="text-gray-400 text-sm">
-                        {{ sale.created_at.strftime('%I:%M %p') }} · ₹{{ "{:.2f}".format(sale.grand_total) }}
+                        {{ sale.created_at.strftime('%I:%M %p') }} · ₹{{ "{:.2f}".format(sale.grand_total or 0.00) }}
                     </p>
                 </div>
             </div>
