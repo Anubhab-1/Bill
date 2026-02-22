@@ -30,6 +30,9 @@ def login():
                 # Deliberately vague — don't reveal which field was wrong
                 current_app.logger.warning(f"Failed login attempt for username: {username}")
                 error = 'Invalid username or password.'
+            elif not user.is_active:
+                current_app.logger.warning(f"Login attempt for disabled account: {username}")
+                error = 'Your account has been disabled. Contact your administrator.'
             else:
                 # ── Populate session (minimal — only what's needed) ──
                 session.clear()

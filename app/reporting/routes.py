@@ -6,7 +6,7 @@ Reporting & Analytics routes.
 import csv
 import io
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from flask import (
     render_template, request, Response, stream_with_context,
@@ -476,16 +476,16 @@ def api_payment_methods():
 
     rows = (
         db.session.query(
-            SalePayment.method,
+            SalePayment.payment_method,
             func.coalesce(func.sum(SalePayment.amount), 0).label('total')
         )
         .join(Sale, Sale.id == SalePayment.sale_id)
         .filter(cast(Sale.created_at, Date) >= start)
-        .group_by(SalePayment.method)
+        .group_by(SalePayment.payment_method)
         .all()
     )
 
-    labels = [r.method.title() for r in rows]
+    labels = [r.payment_method.title() for r in rows]
     values = [float(r.total) for r in rows]
     return jsonify({'labels': labels, 'values': values})
 
