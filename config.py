@@ -65,6 +65,7 @@ class TestingConfig(Config):
         "poolclass": NullPool
     }
     WTF_CSRF_ENABLED = False
+    WTF_CSRF_CHECK_DEFAULT = False
 
 config = {
     'development': DevelopmentConfig,
