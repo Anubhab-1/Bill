@@ -1,3 +1,4 @@
+from decimal import Decimal
 from flask import render_template, request, flash, redirect, url_for, jsonify, current_app
 from sqlalchemy.exc import IntegrityError
 from app import db

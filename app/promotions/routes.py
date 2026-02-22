@@ -34,8 +34,16 @@ def create():
         if not promo_type: errors['promo_type'] = 'Type is required'
         
         # Parse dates
-        start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
-        end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
+        try:
+            start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
+        except ValueError:
+            errors['start_date'] = 'Invalid start date. Use YYYY-MM-DD format.'
+            start_date = None
+        try:
+            end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
+        except ValueError:
+            errors['end_date'] = 'Invalid end date. Use YYYY-MM-DD format.'
+            end_date = None
 
         # Build parameters
         params = {}
@@ -100,8 +108,14 @@ def edit(promo_id):
         if not errors:
             promo.name = name
             promo.promo_type = promo_type
-            promo.start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
-            promo.end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
+            try:
+                promo.start_date = datetime.strptime(start_date_s, '%Y-%m-%d') if start_date_s else None
+            except ValueError:
+                errors['start_date'] = 'Invalid start date. Use YYYY-MM-DD format.'
+            try:
+                promo.end_date = datetime.strptime(end_date_s, '%Y-%m-%d') if end_date_s else None
+            except ValueError:
+                errors['end_date'] = 'Invalid end date. Use YYYY-MM-DD format.'
             promo.is_active = is_active
             promo.params_dict = params
             db.session.commit()

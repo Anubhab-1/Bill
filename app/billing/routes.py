@@ -1259,7 +1259,7 @@ def returns_process(sale_id):
             total_refund = Decimal('0.00')
             items_returned = False
 
-            for item in locked_items:
+            for item in sale_items_to_lock:
                 qty_str = request.form.get(f'qty_{item.id}')
                 if not qty_str:
                     continue
