@@ -759,7 +759,7 @@ def complete():
                 {
                     'name': item.product.name if item.product else 'Unknown',
                     'qty': item.quantity,
-                    'price': float(item.unit_price),
+                    'price': float(item.price_at_sale),
                     'subtotal': float(item.subtotal)
                 } for item in sale.items
             ]
