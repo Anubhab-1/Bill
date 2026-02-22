@@ -66,6 +66,7 @@ class SaleItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=False, index=True)
     quantity = db.Column(db.Integer, nullable=False)
     price_at_sale = db.Column(db.Numeric(10, 2), nullable=False)
@@ -77,11 +78,12 @@ class SaleItem(db.Model):
     unit_label = db.Column(db.String(10), nullable=True)
 
     variant = db.relationship('ProductVariant', lazy='select')
+    _product = db.relationship('Product', lazy='select', overlaps="variant,product")
 
     @property
     def product(self):
-        # Compatibility helper used by templates/routes that expect item.product.
-        return self.variant.product if self.variant else None
+        # Prefer the variant's product, fallback to the directly linked product
+        return self.variant.product if self.variant else self._product
 
     @property
     def gst_amount(self) -> Decimal:
