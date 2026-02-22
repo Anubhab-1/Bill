@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block page_title %}Hardware Integration{% endblock %}
+{% block page_subtitle %}Configure local POS receipt printers and cash drawers{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+    <!-- ══ LEFT: STATUS & TESTING ═════════════════════════════ -->
+    <div class="xl:col-span-1 space-y-6">
+
+        <!-- Connection Status Card -->
+        <div class="bg-slate-900 border border-white/10 rounded-xl p-6">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Agent Status</h3>
+
+            <div id="hw-status-card"
+                class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/10 rounded-xl mb-6 transition-all">
+                <div
+                    class="w-16 h-16 rounded-full flex items-center justify-center mb-4 hw-icon-bg bg-red-500/10 transition-colors">
+                    <svg class="w-8 h-8 hw-icon-svg text-red-500 transition-colors" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                </div>
+                <h4 id="hw-status-title" class="text-xl font-bold text-white mb-1">Disconnected</h4>
+                <p id="hw-status-desc" class="text-sm text-gray-400 text-center">Local hardware agent is not running.
+                </p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="testPrinter()" id="btn-test-printer" disabled
+                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
+                    </svg>
+                    Test Printer
+                </button>
+                <button onclick="testDrawer()" id="btn-test-drawer" disabled
+                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Kick Cash Drawer
+                </button>
+            </div>
+
+            <p id="test-feedback" class="text-xs text-center mt-4 hidden"></p>
+        </div>
+
+    </div>
+
+    <!-- ══ RIGHT: INSTALLATION GUIDE ══════════════════════════ -->
+    <div class="xl:col-span-2">
+        <div class="bg-slate-900 border border-white/10 rounded-xl overflow-hidden">
+            <div class="p-6 border-b border-white/10 bg-black/20">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Installation Guide
+                </h3>
+                <p class="text-sm text-gray-400 mt-1">Web browsers cannot talk directly to USB hardware. To print
+                    physical receipts, run the lightweight companion agent on your local machine.</p>
+            </div>
+
+            <div class="p-6 space-y-8">
+
+                <!-- Step 1 -->
+                <div class="flex gap-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center flex-shrink-0 border border-indigo-500/20">
+                        1</div>
+                    <div>
+                        <h4 class="text-white font-semibold mb-2">Download the Agent Script</h4>
+                        <p class="text-sm text-gray-400 mb-4">Download the Python script and requirements file to the
+                            cashier's computer.</p>
+                        <div
+                            class="bg-black/40 rounded-lg p-4 font-mono text-xs text-gray-300 border border-white/5 overflow-x-auto whitespace-pre">
+                            # Save to a new folder on your PC
+                            pos_agent.py
+                            requirements.txt
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex gap-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center flex-shrink-0 border border-indigo-500/20">
+                        2</div>
+                    <div>
+                        <h4 class="text-white font-semibold mb-2">Install Dependencies</h4>
+                        <p class="text-sm text-gray-400 mb-4">Open a terminal or command prompt in that folder and
+                            install the required packages.</p>
+                        <div
+                            class="bg-black/40 rounded-lg p-4 font-mono text-xs text-gray-300 border border-white/5 flex justify-between items-center group">
+                            <code>pip install -r requirements.txt</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="flex gap-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center flex-shrink-0 border border-indigo-500/20">
+                        3</div>
+                    <div>
+                        <h4 class="text-white font-semibold mb-2">Configure and Run</h4>
+                        <p class="text-sm text-gray-400 mb-4">Open <code>pos_agent.py</code> in a text editor. Change
+                            <code>PRINTER_TYPE</code> to match your setup ('usb' or 'network'). Enter your printer's IP
+                            or USB Vendor ID. Then run it:</p>
+                        <div class="bg-black/40 rounded-lg p-4 font-mono text-xs text-gray-300 border border-white/5">
+                            <code>python pos_agent.py</code>
+                        </div>
+                        <p class="text-xs text-amber-400/80 mt-3 flex items-start gap-1.5">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            The script must be kept running in the background while the cashier is working. You can
+                            minimize the terminal window.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let hwSocket = null;
+    let hwConnected = false;
+
+    // Connect automatically to test
+    function connectTestAgent() {
+        if (hwSocket) return;
+
+        hwSocket = new WebSocket('ws://localhost:8765');
+
+        hwSocket.onopen = () => {
+            hwConnected = true;
+
+            // Update UI status card
+            const bgEl = document.querySelector('.hw-icon-bg');
+            const svgEl = document.querySelector('.hw-icon-svg');
+
+            bgEl.classList.replace('bg-red-500/10', 'bg-emerald-500/10');
+            svgEl.classList.replace('text-red-500', 'text-emerald-500');
+
+            document.getElementById('hw-status-title').textContent = 'Connected';
+            document.getElementById('hw-status-title').classList.replace('text-white', 'text-emerald-400');
+            document.getElementById('hw-status-desc').textContent = 'Agent running natively on this computer.';
+
+            // Enable buttons
+            const btnP = document.getElementById('btn-test-printer');
+            const btnD = document.getElementById('btn-test-drawer');
+
+            [btnP, btnD].forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-800', 'text-gray-500', 'cursor-not-allowed', 'border-white/5');
+                btn.classList.add('bg-white', 'text-slate-900', 'hover:bg-slate-200');
+            });
+        };
+
+        hwSocket.onclose = () => {
+            hwConnected = false;
+            hwSocket = null;
+            setTimeout(connectTestAgent, 5000);
+        };
+
+        hwSocket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                const fb = document.getElementById('test-feedback');
+                fb.classList.remove('hidden');
+
+                if (data.status === 'success') {
+                    fb.className = 'text-xs text-center mt-4 text-emerald-400';
+                    fb.textContent = '✅ ' + data.message;
+                } else {
+                    fb.className = 'text-xs text-center mt-4 text-red-400';
+                    fb.textContent = '❌ ' + data.message;
+                }
+
+                setTimeout(() => fb.classList.add('hidden'), 4000);
+            } catch (e) { }
+        }
+    }
+
+    connectTestAgent();
+
+    function testPrinter() {
+        if (!hwConnected) return;
+        hwSocket.send(JSON.stringify({
+            action: 'print_receipt',
+            data: {
+                invoice_number: 'TEST-1234',
+                subtotal: 99.00,
+                gst_total: 1.00,
+                grand_total: 100.00,
+                items: [
+                    { name: "Test Item Print", qty: 1, price: 99.00, subtotal: 99.00 }
+                ]
+            }
+        }));
+    }
+
+    function testDrawer() {
+        if (!hwConnected) return;
+        hwSocket.send(JSON.stringify({ action: 'open_drawer' }));
+    }
+</script>
+{% endblock %}

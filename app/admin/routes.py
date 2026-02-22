@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from flask import abort
 from flask import current_app
 from flask import flash
+from flask import render_template
 from flask import redirect
 from flask import send_from_directory
 from flask import url_for
@@ -86,4 +87,13 @@ def download_backup(filename):
         backup_dir,
         filename,
         as_attachment=True,
+    )
+
+@admin.route('/hardware')
+@admin_required
+def hardware_setup():
+    """Instructions and tools for configuring the local POS hardware agent."""
+    return render_template(
+        'admin/hardware.html', 
+        title='Hardware Integration'
     )

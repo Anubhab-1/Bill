@@ -744,6 +744,30 @@ def complete():
         session.pop('customer_id', None) # Detach customer after sale
         
         current_app.logger.info(f"Sale completed by User ID {cashier_id}: {invoice_number} | Total: {sale.grand_total}")
+        
+        # Build JSON receipt payload for hardware agent
+        receipt_data = {
+            'invoice_number': sale.invoice_number,
+            'subtotal': float(sale.total_amount),
+            'gst_total': float(sale.gst_total),
+            'grand_total': float(sale.grand_total),
+            'items': [
+                {
+                    'name': item.product.name if item.product else 'Unknown',
+                    'qty': item.quantity,
+                    'price': float(item.unit_price),
+                    'subtotal': float(item.subtotal)
+                } for item in sale.items
+            ]
+        }
+
+        if request.headers.get('Accept') == 'application/json':
+            return jsonify({
+                'status': 'success',
+                'redirect': url_for('billing.invoice', sale_id=sale.id),
+                'receipt': receipt_data
+            })
+
         flash(f'Sale complete! Invoice {invoice_number}', 'success')
         return redirect(url_for('billing.invoice', sale_id=sale.id))
 

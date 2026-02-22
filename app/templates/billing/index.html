@@ -145,8 +145,18 @@
     </div>
 
     <!-- ══ RIGHT: TRANSACTION DETAILS (8/12) ════════════════════════ -->
-    <div class="xl:col-span-8 flex flex-col h-full">
-        <div id="cart-section" class="flex-1 overflow-hidden flex flex-col">
+    <div class="xl:col-span-8 flex flex-col h-full relative">
+        <!-- Hardware Connection Status Header -->
+        <div class="absolute top-0 right-0 p-3 z-10 flex items-center justify-end w-full pointer-events-none">
+            <div id="hw-status"
+                class="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 border border-red-500/30 text-xs font-semibold shadow-lg backdrop-blur-md transition-colors">
+                <span class="text-lg leading-none">🖨️</span>
+                <span class="hw-dot w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                <span class="hw-text text-red-400">Disconnected</span>
+            </div>
+        </div>
+
+        <div id="cart-section" class="flex-1 overflow-hidden flex flex-col pt-12">
             {% include 'billing/_cart.html' %}
         </div>
     </div>
@@ -288,6 +298,96 @@
         inputEl.disabled = false;
         document.getElementById('gift-code').name = 'gift_card_code';
     }
+
+    // ── Local Hardware Agent Integration ──────────────────────────────────────
+
+    let hwSocket = null;
+    let hwConnected = false;
+    const hwStatus = document.getElementById('hw-status');
+    const hwDot = hwStatus.querySelector('.hw-dot');
+    const hwText = hwStatus.querySelector('.hw-text');
+
+    function connectHardwareAgent() {
+        if (hwSocket) return;
+
+        // Connect to local python-escpos agent
+        hwSocket = new WebSocket('ws://localhost:8765');
+
+        hwSocket.onopen = () => {
+            hwConnected = true;
+            hwStatus.classList.replace('bg-slate-800', 'bg-emerald-900/40');
+            hwStatus.classList.replace('border-white/10', 'border-emerald-500/30');
+            hwDot.classList.replace('bg-red-500', 'bg-emerald-400');
+            hwDot.classList.remove('animate-pulse');
+            hwText.textContent = 'Hardware Ready';
+            hwText.classList.replace('text-gray-400', 'text-emerald-300');
+        };
+
+        hwSocket.onclose = () => {
+            hwConnected = false;
+            hwSocket = null;
+            hwStatus.className = 'pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 border border-red-500/30 text-xs font-semibold shadow-lg backdrop-blur-md transition-colors';
+            hwDot.className = 'hw-dot w-2 h-2 rounded-full bg-red-500 animate-pulse';
+            hwText.textContent = 'Disconnected';
+            hwText.className = 'hw-text text-red-400';
+
+            // Retry connection every 5 seconds silently
+            setTimeout(connectHardwareAgent, 5000);
+        };
+    }
+
+    // Attempt connection on load
+    connectHardwareAgent();
+
+    // Intercept checkout form submission
+    document.getElementById('checkout-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const btn = document.getElementById('confirm-payment-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="animate-spin inline-block mr-2">⟳</span> Processing...';
+
+        try {
+            const formData = new FormData(this);
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                // Let the browser handle flash redirects natively if JSON wasn't returned
+                window.location.reload();
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Send to local hardware printer
+                if (hwConnected && hwSocket.readyState === WebSocket.OPEN) {
+                    // Kick drawer open
+                    hwSocket.send(JSON.stringify({ action: "open_drawer" }));
+                    // Print receipt
+                    hwSocket.send(JSON.stringify({
+                        action: "print_receipt",
+                        data: data.receipt
+                    }));
+                } else {
+                    console.log("Hardware not connected, skipping local print job.");
+                }
+
+                // Redirect to web invoice view
+                window.location.href = data.redirect;
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error(err);
+            window.location.reload();
+        }
+    });
+
 </script>
 
 {% endblock %}
