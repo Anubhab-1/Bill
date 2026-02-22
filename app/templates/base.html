@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
     content="Mall Billing System — Centralized billing and inventory management for modern malls." />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <title>{% block title %}{{ title }} | Mall Billing System{% endblock %}</title>
 
   <!-- Tailwind CSS CDN -->
@@ -349,7 +352,13 @@
           <h1 class="text-lg font-semibold text-white">{% block page_title %}{{ title }}{% endblock %}</h1>
           <p class="text-xs text-gray-500 mt-0.5">{% block page_subtitle %}Mall Billing System{% endblock %}</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
+          <!-- Network Status Indicator -->
+          <div id="network-status"
+            class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-opacity duration-300 opacity-0">
+            <span class="w-2 h-2 rounded-full bg-current"></span>
+            <span class="status-text"></span>
+          </div>
           <!-- Notification bell -->
           <button
             class="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">

@@ -147,6 +147,11 @@ def _send_alert_email(subject, body):
     # For now, we simulate it clearly in logs
     current_app.logger.critical(f"SENDING EMAIL ALERT: {subject} \n {body}")
 
+@main.route('/offline')
+def offline():
+    """PWA offline fallback page."""
+    return render_template('offline.html')
+
 @main.route('/')
 @login_required
 def index():

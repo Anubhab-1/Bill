@@ -1,0 +1,45 @@
+{
+    "name": "Mall Billing System",
+    "short_name": "MallBilling",
+    "description": "Production-ready point of sale and billing system for mall retailers.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#030712",
+    "theme_color": "#4f46e5",
+    "orientation": "any",
+    "scope": "/",
+    "lang": "en",
+    "icons": [
+        {
+            "src": "/static/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "shortcuts": [
+        {
+            "name": "New Sale",
+            "short_name": "Billing",
+            "url": "/billing/",
+            "description": "Open the billing screen"
+        },
+        {
+            "name": "Reports",
+            "short_name": "Reports",
+            "url": "/reporting/",
+            "description": "View analytics and reports"
+        }
+    ]
+}
