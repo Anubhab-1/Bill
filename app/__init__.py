@@ -216,10 +216,23 @@ def register_commands(app):
 
     @app.cli.command('patch-db')
     def patch_db():
-        """Apply safe schema patches."""
+        """Apply safe schema patches and auto-seed admin on first run."""
         from app.migration import run_auto_migration
         run_auto_migration(app)
         click.echo("Schema patch complete.")
+
+        # Auto-seed a default admin user if the database is empty.
+        # This allows the app to self-initialize on a fresh Render deployment
+        # without needing shell access (a Pro-only feature).
+        from app.auth.models import User, RoleEnum
+        if User.query.count() == 0:
+            click.echo("No users found. Seeding default admin...")
+            admin = User(name='Administrator', username='admin', role=RoleEnum.admin)
+            admin.set_password('Admin@2026')
+            db.session.add(admin)
+            db.session.commit()
+            click.echo("✅  Default admin created. Username: admin | Password: Admin@2026")
+            click.echo("⚠️   IMPORTANT: Change the admin password after first login!")
 
     from app.seed_history import seed_history
     app.cli.add_command(seed_history)
