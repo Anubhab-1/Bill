@@ -78,12 +78,10 @@ class SaleItem(db.Model):
     unit_label = db.Column(db.String(10), nullable=True)
 
     variant = db.relationship('ProductVariant', lazy='select')
-    _product = db.relationship('Product', lazy='select', overlaps="variant,product")
 
     @property
     def product(self):
-        # Prefer the variant's product, fallback to the directly linked product
-        return self.variant.product if self.variant else self._product
+        return self.variant.product if self.variant else None
 
     @property
     def gst_amount(self) -> Decimal:
