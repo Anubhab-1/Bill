@@ -26,7 +26,7 @@ def run_auto_migration(app):
             
             # 2. Add columns using PostgreSQL 'IF NOT EXISTS' 
             # This is safer and doesn't rely on Inspector
-            with db.engine.connect() as conn:
+            with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
                 try:
                     inspector = inspect(conn)
 
@@ -95,6 +95,11 @@ def run_auto_migration(app):
                         conn.execute(text("ALTER TABLE sale_items ADD COLUMN snapshot_size VARCHAR(10)"))
                     if not column_exists('sale_items', 'snapshot_color'):
                         conn.execute(text("ALTER TABLE sale_items ADD COLUMN snapshot_color VARCHAR(50)"))
+
+                    if not column_exists('users', 'is_active'):
+                        conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
+                    if not column_exists('customers', 'is_active'):
+                        conn.execute(text("ALTER TABLE customers ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL"))
 
                     # InventoryLog: reference (PO/GRN etc.)
                     conn.execute(text("ALTER TABLE inventory_logs ADD COLUMN IF NOT EXISTS reference INTEGER"))
@@ -199,12 +204,14 @@ def run_auto_migration(app):
                     ]
                     for _name, sql in constraints:
                         try:
+                            # Using savepoints so a single constraint failure doesn't crash the script
+                            # Wait, AUTOCOMMIT ignores savepoints, but the query just fails and execution continues
                             conn.execute(text(sql))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(f"Constraint skip: {e}")
 
-                    conn.commit()
                     logger.info("[OK] Database schema patched successfully.")
+
                 except Exception as e:
                     logger.error(f"[WARN] SQL Patch warning: {e}")
 
