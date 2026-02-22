@@ -48,6 +48,8 @@ def run_auto_migration(app):
                     # Sales: discount snapshot fields
                     conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_percent NUMERIC(5,2) DEFAULT 0 NOT NULL"))
                     conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12,2) DEFAULT 0 NOT NULL"))
+                    # Sales: grand_total (persisted total after discounts + gst)
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS grand_total NUMERIC(10,2)"))
                     
                     # Products: is_active
                     conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL"))
