@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import click
 from flask import Flask
@@ -51,13 +54,16 @@ def create_app(config_name='default'):
     cache.init_app(app)
     
     # Enable Redis message queue for SocketIO if REDIS_URL is present (critical for multi-worker prod)
-    redis_url = app.config.get('CACHE_REDIS_URL')
-    socketio.init_app(
-        app, 
-        cors_allowed_origins="*", 
-        async_mode='eventlet',
-        message_queue=redis_url if config_name == 'production' else None
-    )
+    redis_url = os.environ.get('REDIS_URL')
+    if redis_url:
+        socketio.init_app(
+            app, 
+            cors_allowed_origins="*", 
+            async_mode='eventlet',
+            message_queue=redis_url
+        )
+    else:
+        socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
 
 
     # ── Blueprints ────────────────────────────────────────────────

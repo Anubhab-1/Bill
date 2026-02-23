@@ -36,14 +36,10 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 3600 # 1 hour
     CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
     
-    # Auto-detect Redis for Cache Type
-    try:
-        import redis
-        client = redis.from_url(CACHE_REDIS_URL)
-        client.ping()
+    # Use Redis if REDIS_URL is present, otherwise fallback to SimpleCache
+    if os.environ.get('REDIS_URL'):
         CACHE_TYPE = "RedisCache"
-    except Exception:
-        # Fallback to SimpleCache if Redis is down/missing
+    else:
         CACHE_TYPE = "SimpleCache"
 
 class DevelopmentConfig(Config):
