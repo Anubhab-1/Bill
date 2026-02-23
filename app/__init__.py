@@ -1,6 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
-
 import os
 import click
 from flask import Flask
@@ -59,11 +56,11 @@ def create_app(config_name='default'):
         socketio.init_app(
             app, 
             cors_allowed_origins="*", 
-            async_mode='eventlet',
+            async_mode='gevent',
             message_queue=redis_url
         )
     else:
-        socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+        socketio.init_app(app, cors_allowed_origins="*", async_mode='gevent')
 
 
     # ── Blueprints ────────────────────────────────────────────────

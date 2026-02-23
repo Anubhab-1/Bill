@@ -22,4 +22,5 @@ reportlab==4.2.2
 redis==5.0.4
 Flask-Caching==2.3.0
 flask-socketio==5.6.1
-eventlet==0.39.1
+gevent==23.9.1
+gevent-websocket==0.10.1
