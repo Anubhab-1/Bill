@@ -389,33 +389,44 @@
     });
 
     // ── Real-time Inventory Sync (Socket.IO) ───────────────────────────────
-    if (window.socket) {
-        window.socket.on('inventory_update', function (data) {
+    if (typeof io === 'function') {
+        if (!window.socket) {
+            window.socket = io({
+                transports: ['polling', 'websocket'],
+                reconnection: true
+            });
+            window.socket.on('connect', () => console.log('Real-time: Connected to server'));
+            window.socket.on('disconnect', () => console.log('Real-time: Disconnected from server'));
+        }
+
+        if (window._inventoryUpdateHandler) {
+            window.socket.off('inventory_update', window._inventoryUpdateHandler);
+        }
+
+        window._inventoryUpdateHandler = function (data) {
             console.log('Real-time: Inventory Update received', data);
 
             // 1. Check if the updated item is in the current cart
             // We search for elements with data-barcode or variant IDs
             const cartItem = document.querySelector(`[data-barcode="${data.barcode}"]`);
 
-            // 2. Performance: If price changed and item is in cart, we MUST refresh cart to update totals
-            // Using HTMX trigger for #cart-section
+            // 2. If price changed and item is in cart, refresh cart totals
             if (cartItem) {
                 const oldPrice = cartItem.getAttribute('data-price');
                 if (oldPrice && parseFloat(oldPrice) !== parseFloat(data.new_price)) {
-                    showRealTimeToast(`Price update for ${data.product_name}: ₹${data.new_price}`, 'info');
-                    // Trigger HTMX refresh for cart section to recalculate everything (taxes/promos)
+                    showRealTimeToast(`Price update for ${data.product_name}: Rs ${data.new_price}`, 'info');
                     htmx.trigger('#cart-section', 'refreshCart');
                 }
             }
 
-            // 3. Update stock-out indicators dynamically if they exist
+            // 3. Refresh cart if stock badges exist for the affected variant
             const stockLimitBadge = document.querySelector(`[data-variant-id="${data.variant_id}"] .stock-limit-badge`);
             if (stockLimitBadge) {
-                // Logic to hide/show based on qty comparison would be complex without knowing current qty here
-                // Simple approach: Trigger HTMX refresh for accurate state
                 htmx.trigger('#cart-section', 'refreshCart');
             }
-        });
+        };
+
+        window.socket.on('inventory_update', window._inventoryUpdateHandler);
     }
 
     function showRealTimeToast(msg, type = 'info') {
