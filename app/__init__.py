@@ -51,15 +51,21 @@ def create_app(config_name='default'):
     cache.init_app(app)
     
     # Enable Redis message queue for SocketIO if REDIS_URL is present (critical for multi-worker prod)
+    # Force websocket transport only to avoid Engine.IO polling session churn behind non-sticky balancing.
     redis_url = os.environ.get('REDIS_URL')
     if redis_url:
         socketio.init_app(
             app, 
             cors_allowed_origins="*", 
-            message_queue=redis_url
+            message_queue=redis_url,
+            transports=["websocket"],
         )
     else:
-        socketio.init_app(app, cors_allowed_origins="*")
+        socketio.init_app(
+            app,
+            cors_allowed_origins="*",
+            transports=["websocket"],
+        )
 
 
     # ── Blueprints ────────────────────────────────────────────────

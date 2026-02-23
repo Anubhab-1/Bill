@@ -15,8 +15,11 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('PWA: Root SW Registered'))
+        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+          .then(reg => {
+            reg.update();
+            console.log('PWA: Root SW Registered');
+          })
           .catch(err => console.error('PWA: SW Registration Failed:', err));
       });
     }

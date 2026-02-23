@@ -9,7 +9,7 @@
  * Cache versioning: bump CACHE_VERSION when deploying breaking changes.
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.1.0';
 const SHELL_CACHE = `mall-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `mall-static-${CACHE_VERSION}`;
 
@@ -114,11 +114,7 @@ async function networkFirstWithOfflineFallback(request) {
             fetch(request),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
         ]);
-        // Cache successful page responses
-        if (response && response.status === 200 && response.type !== 'opaque') {
-            const cache = await caches.open(SHELL_CACHE);
-            cache.put(request, response.clone());
-        }
+        // Avoid caching HTML navigations to prevent stale authenticated pages.
         return response;
     } catch {
         // Try cache first
