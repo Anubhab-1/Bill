@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 import os
 from dotenv import load_dotenv
 from app import create_app, socketio
