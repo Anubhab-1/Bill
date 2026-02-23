@@ -56,11 +56,10 @@ def create_app(config_name='default'):
         socketio.init_app(
             app, 
             cors_allowed_origins="*", 
-            async_mode='gevent',
             message_queue=redis_url
         )
     else:
-        socketio.init_app(app, cors_allowed_origins="*", async_mode='gevent')
+        socketio.init_app(app, cors_allowed_origins="*")
 
 
     # ── Blueprints ────────────────────────────────────────────────
