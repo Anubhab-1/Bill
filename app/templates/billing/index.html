@@ -196,6 +196,7 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
     // New Customer functionality
     document.getElementById('new-customer-form').addEventListener('submit', function (e) {
@@ -392,7 +393,7 @@
     if (typeof io === 'function') {
         if (!window.socket) {
             window.socket = io({
-                transports: ['polling', 'websocket'],
+                transports: ['websocket'],
                 reconnection: true
             });
             window.socket.on('connect', () => console.log('Real-time: Connected to server'));

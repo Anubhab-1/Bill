@@ -191,32 +191,49 @@ def run_auto_migration(app):
                           AND (si.snapshot_size IS NULL OR si.snapshot_color IS NULL)
                     """))
 
+                    def constraint_exists(table_name, constraint_name):
+                        result = conn.execute(
+                            text(
+                                """
+                                SELECT 1
+                                FROM pg_constraint c
+                                JOIN pg_class t ON t.oid = c.conrelid
+                                JOIN pg_namespace n ON n.oid = t.relnamespace
+                                WHERE c.conname = :constraint_name
+                                  AND t.relname = :table_name
+                                  AND n.nspname = ANY(current_schemas(TRUE))
+                                LIMIT 1
+                                """
+                            ),
+                            {"constraint_name": constraint_name, "table_name": table_name},
+                        ).scalar()
+                        return result is not None
+
                     constraints = [
-                        ("check_variant_stock_non_negative", "ALTER TABLE product_variants ADD CONSTRAINT check_variant_stock_non_negative CHECK (stock >= 0)"),
-                        ("check_variant_price_positive", "ALTER TABLE product_variants ADD CONSTRAINT check_variant_price_positive CHECK (price > 0)"),
-                        ("check_sale_totals_non_negative", "ALTER TABLE sales ADD CONSTRAINT check_sale_totals_non_negative CHECK (total_amount >= 0 AND gst_total >= 0 AND discount_amount >= 0)"),
-                        ("check_sale_discount_percent_valid", "ALTER TABLE sales ADD CONSTRAINT check_sale_discount_percent_valid CHECK (discount_percent >= 0 AND discount_percent <= 100)"),
-                        ("check_sale_item_qty_positive", "ALTER TABLE sale_items ADD CONSTRAINT check_sale_item_qty_positive CHECK (quantity > 0)"),
-                        ("check_sale_item_subtotal_non_negative", "ALTER TABLE sale_items ADD CONSTRAINT check_sale_item_subtotal_non_negative CHECK (subtotal >= 0)"),
-                        ("check_sale_payment_amount_non_negative", "ALTER TABLE sale_payments ADD CONSTRAINT check_sale_payment_amount_non_negative CHECK (amount >= 0)"),
-                        ("check_return_total_non_negative", "ALTER TABLE returns ADD CONSTRAINT check_return_total_non_negative CHECK (total_refunded >= 0)"),
-                        ("check_return_item_qty_positive", "ALTER TABLE return_items ADD CONSTRAINT check_return_item_qty_positive CHECK (quantity > 0)"),
-                        ("check_return_item_refund_non_negative", "ALTER TABLE return_items ADD CONSTRAINT check_return_item_refund_non_negative CHECK (refund_amount >= 0)"),
-                        ("check_cash_session_amounts_non_negative", "ALTER TABLE cash_sessions ADD CONSTRAINT check_cash_session_amounts_non_negative CHECK (opening_cash >= 0 AND system_total >= 0 AND (closing_cash IS NULL OR closing_cash >= 0))"),
-                        ("check_customer_points_non_negative", "ALTER TABLE customers ADD CONSTRAINT check_customer_points_non_negative CHECK (points >= 0)"),
-                        ("check_gift_card_balances_non_negative", "ALTER TABLE gift_cards ADD CONSTRAINT check_gift_card_balances_non_negative CHECK (initial_balance >= 0 AND balance >= 0)"),
-                        ("check_gift_card_balance_within_initial", "ALTER TABLE gift_cards ADD CONSTRAINT check_gift_card_balance_within_initial CHECK (balance <= initial_balance)"),
-                        ("check_po_item_qty_positive", "ALTER TABLE purchase_order_items ADD CONSTRAINT check_po_item_qty_positive CHECK (ordered_qty > 0)"),
-                        ("check_po_item_unit_cost_non_negative", "ALTER TABLE purchase_order_items ADD CONSTRAINT check_po_item_unit_cost_non_negative CHECK (unit_cost IS NULL OR unit_cost >= 0)"),
-                        ("check_grn_item_qty_positive", "ALTER TABLE goods_receipt_items ADD CONSTRAINT check_grn_item_qty_positive CHECK (received_qty > 0)"),
+                        ("product_variants", "check_variant_stock_non_negative", "ALTER TABLE product_variants ADD CONSTRAINT check_variant_stock_non_negative CHECK (stock >= 0)"),
+                        ("product_variants", "check_variant_price_positive", "ALTER TABLE product_variants ADD CONSTRAINT check_variant_price_positive CHECK (price > 0)"),
+                        ("sales", "check_sale_totals_non_negative", "ALTER TABLE sales ADD CONSTRAINT check_sale_totals_non_negative CHECK (total_amount >= 0 AND gst_total >= 0 AND discount_amount >= 0)"),
+                        ("sales", "check_sale_discount_percent_valid", "ALTER TABLE sales ADD CONSTRAINT check_sale_discount_percent_valid CHECK (discount_percent >= 0 AND discount_percent <= 100)"),
+                        ("sale_items", "check_sale_item_qty_positive", "ALTER TABLE sale_items ADD CONSTRAINT check_sale_item_qty_positive CHECK (quantity > 0)"),
+                        ("sale_items", "check_sale_item_subtotal_non_negative", "ALTER TABLE sale_items ADD CONSTRAINT check_sale_item_subtotal_non_negative CHECK (subtotal >= 0)"),
+                        ("sale_payments", "check_sale_payment_amount_non_negative", "ALTER TABLE sale_payments ADD CONSTRAINT check_sale_payment_amount_non_negative CHECK (amount >= 0)"),
+                        ("returns", "check_return_total_non_negative", "ALTER TABLE returns ADD CONSTRAINT check_return_total_non_negative CHECK (total_refunded >= 0)"),
+                        ("return_items", "check_return_item_qty_positive", "ALTER TABLE return_items ADD CONSTRAINT check_return_item_qty_positive CHECK (quantity > 0)"),
+                        ("return_items", "check_return_item_refund_non_negative", "ALTER TABLE return_items ADD CONSTRAINT check_return_item_refund_non_negative CHECK (refund_amount >= 0)"),
+                        ("cash_sessions", "check_cash_session_amounts_non_negative", "ALTER TABLE cash_sessions ADD CONSTRAINT check_cash_session_amounts_non_negative CHECK (opening_cash >= 0 AND system_total >= 0 AND (closing_cash IS NULL OR closing_cash >= 0))"),
+                        ("customers", "check_customer_points_non_negative", "ALTER TABLE customers ADD CONSTRAINT check_customer_points_non_negative CHECK (points >= 0)"),
+                        ("gift_cards", "check_gift_card_balances_non_negative", "ALTER TABLE gift_cards ADD CONSTRAINT check_gift_card_balances_non_negative CHECK (initial_balance >= 0 AND balance >= 0)"),
+                        ("gift_cards", "check_gift_card_balance_within_initial", "ALTER TABLE gift_cards ADD CONSTRAINT check_gift_card_balance_within_initial CHECK (balance <= initial_balance)"),
+                        ("purchase_order_items", "check_po_item_qty_positive", "ALTER TABLE purchase_order_items ADD CONSTRAINT check_po_item_qty_positive CHECK (ordered_qty > 0)"),
+                        ("purchase_order_items", "check_po_item_unit_cost_non_negative", "ALTER TABLE purchase_order_items ADD CONSTRAINT check_po_item_unit_cost_non_negative CHECK (unit_cost IS NULL OR unit_cost >= 0)"),
+                        ("goods_receipt_items", "check_grn_item_qty_positive", "ALTER TABLE goods_receipt_items ADD CONSTRAINT check_grn_item_qty_positive CHECK (received_qty > 0)"),
                     ]
-                    for _name, sql in constraints:
+                    for table_name, constraint_name, sql in constraints:
                         try:
-                            # Using savepoints so a single constraint failure doesn't crash the script
-                            # Wait, AUTOCOMMIT ignores savepoints, but the query just fails and execution continues
-                            conn.execute(text(sql))
+                            if not constraint_exists(table_name, constraint_name):
+                                conn.execute(text(sql))
                         except Exception as e:
-                            logger.warning(f"Constraint skip: {e}")
+                            logger.warning(f"Constraint check/add skip ({table_name}.{constraint_name}): {e}")
 
                     logger.info("[OK] Database schema patched successfully.")
 
