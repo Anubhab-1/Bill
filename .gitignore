@@ -14,3 +14,8 @@ instance/
 .webassets-cache
 *.db
 *.sqlite3
+test_out.txt
+test_debug.log
+.pytest_cache/
+logs/
+*.log

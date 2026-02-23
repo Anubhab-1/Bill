@@ -32,6 +32,20 @@ class Config:
     LOCAL_PRODUCTION = False
     ALLOW_SCHEMA_FIX_ROUTE = os.environ.get('ALLOW_SCHEMA_FIX_ROUTE', 'false').lower() == 'true'
 
+    # ── Caching ──────────────────────────────────────────────────
+    CACHE_DEFAULT_TIMEOUT = 3600 # 1 hour
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    
+    # Auto-detect Redis for Cache Type
+    try:
+        import redis
+        client = redis.from_url(CACHE_REDIS_URL)
+        client.ping()
+        CACHE_TYPE = "RedisCache"
+    except Exception:
+        # Fallback to SimpleCache if Redis is down/missing
+        CACHE_TYPE = "SimpleCache"
+
 class DevelopmentConfig(Config):
     """Development environment configuration."""
     DEBUG = True

@@ -8,8 +8,29 @@
     content="Mall Billing System — Centralized billing and inventory management for modern malls." />
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="manifest" href="/manifest.json">
   <title>{% block title %}{{ title }} | Mall Billing System{% endblock %}</title>
+
+  <!-- PWA Early Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('PWA: Root SW Registered'))
+          .catch(err => console.error('PWA: SW Registration Failed:', err));
+      });
+    }
+  </script>
+  <script src="{{ url_for('static', filename='js/pwa.js') }}" defer></script>
+
+  <!-- Real-time Sync (Socket.IO) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    window.socket = socket;
+    socket.on('connect', () => console.log('Real-time: Connected to server'));
+    socket.on('disconnect', () => console.log('Real-time: Disconnected from server'));
+  </script>
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -410,6 +431,32 @@
 
     </div>
   </div>
+
+  <script>
+    // Network Status UI Logic
+    function updateNetworkStatus() {
+      const el = document.getElementById('network-status');
+      const text = el.querySelector('.status-text');
+      if (!el) return;
+
+      el.classList.remove('hidden', 'opacity-0');
+      el.classList.add('flex', 'opacity-100');
+
+      if (navigator.onLine) {
+        el.classList.remove('bg-red-500/10', 'text-red-400', 'border-red-500/20');
+        el.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+        text.textContent = 'Online';
+        setTimeout(() => { if (navigator.onLine) el.classList.add('opacity-0'); }, 3000);
+      } else {
+        el.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+        el.classList.add('bg-red-500/10', 'text-red-400', 'border-red-500/20');
+        text.textContent = 'Offline';
+      }
+    }
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    if (!navigator.onLine) updateNetworkStatus();
+  </script>
 
   {% block extra_scripts %}{% endblock %}
 </body>

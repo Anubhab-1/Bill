@@ -43,6 +43,7 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
 </head>
 
 <body
@@ -133,6 +134,16 @@
         </div>
 
     </div>
+
+    <!-- PWA Scripts -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
 
 </body>
 

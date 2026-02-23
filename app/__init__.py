@@ -2,8 +2,12 @@ import os
 import click
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_caching import Cache
+from flask_socketio import SocketIO
 
 db = SQLAlchemy()
+cache = Cache()
+socketio = SocketIO()
 
 
 def create_app(config_name='default'):
@@ -44,6 +48,16 @@ def create_app(config_name='default'):
     csrf.init_app(app)
 
     db.init_app(app)
+    cache.init_app(app)
+    
+    # Enable Redis message queue for SocketIO if REDIS_URL is present (critical for multi-worker prod)
+    redis_url = app.config.get('CACHE_REDIS_URL')
+    socketio.init_app(
+        app, 
+        cors_allowed_origins="*", 
+        async_mode='eventlet',
+        message_queue=redis_url if config_name == 'production' else None
+    )
 
 
     # ── Blueprints ────────────────────────────────────────────────

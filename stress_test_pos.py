@@ -202,7 +202,7 @@ def request_with_metrics(
         resp = sess.request(method, url, timeout=timeout, allow_redirects=True, **kwargs)
         latency_ms = (time.perf_counter() - start) * 1000.0
         excerpt = ""
-        if resp.status_code >= 500:
+        if resp.status_code >= 400:
             try:
                 excerpt = (resp.text or "")[:500]
             except Exception:
@@ -232,6 +232,21 @@ def ensure_login_and_open_session(
     state: StressState,
     timeout: int,
 ) -> bool:
+    login_page = request_with_metrics(
+        sess, "GET", f"{base_url}/auth/login", "/auth/login_get", state, timeout
+    )
+    import re
+    m = re.search(r'name="csrf_token"[^>]+value="([^"]+)"', login_page.text)
+    if not m:
+        m = re.search(r'value="([^"]+)"[^>]+name="csrf_token"', login_page.text)
+    if m:
+        sess.headers.update({
+            "X-CSRFToken": m.group(1),
+            "Referer": f"{base_url}/auth/login",
+            "Origin": base_url
+        })
+
+
     login_resp = request_with_metrics(
         sess,
         "POST",
@@ -239,7 +254,7 @@ def ensure_login_and_open_session(
         "/auth/login",
         state,
         timeout,
-        data={"username": username, "password": password},
+        data={"username": username, "password": password, "csrf_token": sess.headers.get("X-CSRFToken", "")},
     )
     if login_resp.status_code != 200:
         return False
@@ -255,6 +270,13 @@ def ensure_login_and_open_session(
     if billing_resp.status_code != 200:
         return False
 
+    # Extract new CSRF token after login
+    m2 = re.search(r'name="csrf_token"[^>]+value="([^"]+)"', billing_resp.text)
+    if not m2:
+        m2 = re.search(r'value="([^"]+)"[^>]+name="csrf_token"', billing_resp.text)
+    if m2:
+        sess.headers.update({"X-CSRFToken": m2.group(1)})
+
     on_open_session_page = (
         "/billing/session/open" in billing_resp.url
         or "Start Your Shift" in billing_resp.text
@@ -268,7 +290,7 @@ def ensure_login_and_open_session(
             "/billing/session/open",
             state,
             timeout,
-            data={"opening_cash": to_money(opening_cash)},
+            data={"opening_cash": to_money(opening_cash), "csrf_token": sess.headers.get("X-CSRFToken", "")},
         )
         if open_resp.status_code != 200:
             return False
@@ -308,7 +330,7 @@ def add_items_to_cart(
             "/billing/add-item",
             state,
             timeout,
-            data={"barcode": bc},
+            data={"barcode": bc, "csrf_token": sess.headers.get("X-CSRFToken", "")},
         )
         if resp.status_code != 200:
             continue
@@ -339,6 +361,7 @@ def inject_invalid_completion(
             "payment_upi": "0",
             "payment_loyalty": "0",
             "payment_gift": "0",
+            "csrf_token": sess.headers.get("X-CSRFToken", "")
         },
     )
 
@@ -359,6 +382,7 @@ def complete_sale(
 
     total_due = unit_total_with_tax * Decimal(qty_total)
     payment_payload = build_payment_payload(total_due, rng)
+    payment_payload["csrf_token"] = sess.headers.get("X-CSRFToken", "")
 
     resp = request_with_metrics(
         sess,
@@ -549,7 +573,7 @@ def setup_products_db(args: argparse.Namespace) -> Tuple[List[str], Dict[str, in
 
     rows = []
     for i in range(args.product_count):
-        barcode = f"{prefix}-{i:04d}"
+        barcode = f"P_{prefix}-{i:04d}"
         rows.append({
             "name": f"Stress Product {i:03d}",
             "barcode": barcode,
@@ -575,13 +599,39 @@ def setup_products_db(args: argparse.Namespace) -> Tuple[List[str], Dict[str, in
         """), rows)
 
         product_rows = conn.execute(text("""
+            SELECT id, barcode FROM products WHERE barcode LIKE :prefix
+        """), {"prefix": f"P_{prefix}%"}).fetchall()
+
+        variant_rows = []
+        for i, r in enumerate(product_rows):
+            v_barcode = f"{prefix}-{i:04d}"
+            variant_rows.append({
+                "product_id": r.id,
+                "size": "Default",
+                "color": "Default",
+                "barcode": v_barcode,
+                "price": args.unit_price,
+                "stock": args.initial_stock,
+                "is_active": True,
+                "created_at": now,
+            })
+            
+        conn.execute(text("""
+            INSERT INTO product_variants (
+                product_id, size, color, barcode, price, stock, is_active, created_at
+            ) VALUES (
+                :product_id, :size, :color, :barcode, :price, :stock, :is_active, :created_at
+            )
+        """), variant_rows)
+
+        final_rows = conn.execute(text("""
             SELECT barcode, stock
-            FROM products
+            FROM product_variants
             WHERE barcode LIKE :prefix
         """), {"prefix": f"{prefix}%"}).fetchall()
 
-    barcodes = [r.barcode for r in product_rows]
-    initial_stock = {r.barcode: int(r.stock) for r in product_rows}
+    barcodes = [r.barcode for r in final_rows]
+    initial_stock = {r.barcode: int(r.stock) for r in final_rows}
     return barcodes, initial_stock
 
 
@@ -590,9 +640,23 @@ def setup_products_api(args: argparse.Namespace) -> None:
     admin_user = args.usernames[0]
     admin_pass = args.passwords[0]
     with requests.Session() as sess:
+        login_page = sess.get(f"{args.base_url}/auth/login", timeout=args.timeout)
+        import re
+        m = re.search(r'name="csrf_token"[^>]+value="([^"]+)"', login_page.text)
+        if not m:
+            m = re.search(r'value="([^"]+)"[^>]+name="csrf_token"', login_page.text)
+        if m:
+            sess.headers.update({
+                "X-CSRFToken": m.group(1),
+                "Referer": f"{args.base_url}/auth/login",
+                "Origin": args.base_url
+            })
+
+
+
         login = sess.post(
             f"{args.base_url}/auth/login",
-            data={"username": admin_user, "password": admin_pass},
+            data={"username": admin_user, "password": admin_pass, "csrf_token": sess.headers.get("X-CSRFToken", "")},
             timeout=args.timeout,
             allow_redirects=True,
         )
@@ -607,6 +671,7 @@ def setup_products_api(args: argparse.Namespace) -> None:
                 "price": str(args.unit_price),
                 "stock": str(args.initial_stock),
                 "gst_percent": str(args.gst_percent),
+                "csrf_token": sess.headers.get("X-CSRFToken", "")
             }
             resp = sess.post(
                 f"{args.base_url}/inventory/new",
@@ -623,7 +688,7 @@ def fetch_final_stocks(db_url: str, prefix: str) -> Dict[str, int]:
     with engine.connect() as conn:
         rows = conn.execute(text("""
             SELECT barcode, stock
-            FROM products
+            FROM product_variants
             WHERE barcode LIKE :prefix
         """), {"prefix": f"{prefix}%"}).fetchall()
     return {r.barcode: int(r.stock) for r in rows}
@@ -635,7 +700,8 @@ def fetch_sold_quantities(db_url: str, prefix: str) -> Dict[str, int]:
         rows = conn.execute(text("""
             SELECT p.barcode, COALESCE(SUM(si.quantity), 0) AS sold_qty
             FROM products p
-            LEFT JOIN sale_items si ON si.product_id = p.id
+            LEFT JOIN product_variants pv ON pv.product_id = p.id
+            LEFT JOIN sale_items si ON si.variant_id = pv.id
             WHERE p.barcode LIKE :prefix
             GROUP BY p.barcode
         """), {"prefix": f"{prefix}%"}).fetchall()
@@ -869,9 +935,16 @@ def main() -> int:
         print("\n[FAIL] Assertions failed:")
         for e in errors:
             print(f"  - {e}")
-        return 1
 
-    print("\n[PASS] All assertions satisfied.")
+        # Print some sample errors if 400s
+        bad_reqs = [m for m in state.request_metrics if m.status_code >= 400 and m.status_code < 500]
+        if bad_reqs:
+            print("\nSample 4xx Errors:")
+            for m in bad_reqs[:5]:
+                print(f"  [{m.status_code}] {m.route} -> {m.response_excerpt[:80]}...")
+
+        return 1
+    else: print("\n[PASS] All assertions satisfied.")
     return 0
 
 

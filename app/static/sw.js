@@ -71,6 +71,26 @@ self.addEventListener('fetch', event => {
     }
 });
 
+// ── Background Sync ───────────────────────────────────────────────────────
+self.addEventListener('sync', event => {
+    if (event.tag === 'sync-sales') {
+        console.log('SW: Background sync triggered for "sync-sales"');
+        event.waitUntil(syncOfflineData());
+    }
+});
+
+/**
+ * Communicates with the client (pwa.js) to trigger the sync.
+ * Since SW doesn't have direct access to IndexedDB in many old browsers 
+ * or it's cleaner to let pwa.js handle the domain-specific POSTs.
+ */
+async function syncOfflineData() {
+    const clients = await self.clients.matchAll();
+    for (const client of clients) {
+        client.postMessage({ type: 'TRIGGER_SYNC' });
+    }
+}
+
 // ── Cache-first strategy ───────────────────────────────────────────────────
 async function cacheFirst(request, cacheName) {
     const cached = await caches.match(request);

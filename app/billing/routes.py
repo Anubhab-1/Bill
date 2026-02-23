@@ -14,11 +14,12 @@ from app.billing.cart import (
     add_weighed_to_cart
 )
 from app.billing.invoice import generate_invoice_number
-from app.inventory.models import InventoryLog, ProductVariant
+from sqlalchemy.orm import joinedload
+from app.inventory.models import InventoryLog, Product, ProductVariant
 from app.customers.models import Customer, GiftCard
 from app.billing.models import CashSession
 from app.auth.decorators import login_required, admin_required
-from app import db
+from app import db, cache
 
 # ── Promo engine (lazy import to avoid circular deps) ─────────────
 def _get_promo_result(cart):
@@ -32,6 +33,16 @@ def _get_promo_result(cart):
 from datetime import datetime, timedelta
 
 # ── HELPERS ───────────────────────────────────────────────────────
+
+def get_variant_by_barcode(barcode):
+    """Cached lookup for a variant by its barcode."""
+    cache_key = f"barcode_lookup_{barcode}"
+    variant = cache.get(cache_key)
+    if variant is None:
+        variant = ProductVariant.query.filter_by(barcode=barcode, is_active=True).first()
+        if variant:
+            cache.set(cache_key, variant, timeout=3600)
+    return variant
 
 def get_stock_map(cart):
     """
@@ -170,6 +181,21 @@ def sessions():
 
 # ── BILLING SCREEN ────────────────────────────────────────────────
 
+@billing.route('/refresh')
+@login_required
+def refresh():
+    """Silent refresh of the cart for real-time updates."""
+    cart = get_cart()
+    totals = cart_totals(cart)
+    stock_map = get_stock_map(cart)
+    promo_result = _get_promo_result(cart)
+    customer = db.session.get(Customer, session['customer_id']) if 'customer_id' in session else None
+    
+    return render_template('billing/_cart.html', cart=cart, totals=totals, 
+                           stock_map=stock_map, promo_result=promo_result,
+                           customer=customer)
+
+
 @billing.route('/')
 @login_required
 def index():
@@ -213,7 +239,7 @@ def add_item():
     if not barcode:
         error = 'Please enter a barcode.'
     else:
-        variant = ProductVariant.query.filter_by(barcode=barcode, is_active=True).first()
+        variant = get_variant_by_barcode(barcode)
         product = variant.product if variant else None
 
         if variant is None or product is None or not product.is_active:
@@ -471,6 +497,7 @@ def complete():
             # SELECT … FOR UPDATE — holds a row-level lock until COMMIT/ROLLBACK
             variant = (
                 db.session.query(ProductVariant)
+                .options(joinedload(ProductVariant.product))
                 .filter(ProductVariant.id == vid)
                 .with_for_update()
                 .first()
@@ -597,6 +624,18 @@ def complete():
                 weight_kg=line['weight_kg'],
                 unit_label=line['unit_label'],
             ))
+            # Explicitly link variant to avoid lazy-loading detached error later
+            sale_items[-1].variant = line['variant']
+
+        # Capture item names for receipt payload BEFORE commit
+        receipt_items_snapshot = []
+        for line in line_items:
+            receipt_items_snapshot.append({
+                'name': line['variant'].product.name,
+                'qty': line['qty'],
+                'price': float(line['price']),
+                'subtotal': float(line['discounted_subtotal'])
+            })
 
         invoice_number = generate_invoice_number(db.session)
 
@@ -706,6 +745,9 @@ def complete():
         for si in sale_items:
             si.sale_id = sale.id
             db.session.add(si)
+        
+        sale.items = sale_items
+        db.session.flush()
 
         # ── Persist applied promotions ────────────────────────────
         from app.promotions.models import AppliedPromotion
@@ -725,12 +767,16 @@ def complete():
                 if promo_row:
                     promo_row.current_uses += 1
 
-        # ── Commit Sale ───────────────────────────────────────────
-        db.session.commit()
-
         # ── Generate & Store Invoice Snapshot (HTML) ──────────────
-        # We render the template now while data is fresh and hot.
-        # This snapshot is saved to DB for historical accuracy.
+        # Ensure we have a clean, eager-loaded object for the template
+        db.session.expire_on_commit = False # Keep objects attached after commit if needed
+        sale = db.session.query(Sale).options(
+            joinedload(Sale.items).joinedload(SaleItem.variant).joinedload(ProductVariant.product),
+            joinedload(Sale.cashier),
+            joinedload(Sale.customer),
+            joinedload(Sale.payments)
+        ).filter_by(id=sale.id).first()
+
         try:
             invoice_html = render_template(
                 'billing/invoice.html',
@@ -739,10 +785,11 @@ def complete():
                 reprint_mode=False
             )
             sale.print_html = invoice_html
-            db.session.commit()
         except Exception as e:
-            current_app.logger.error(f"Failed to save invoice snapshot: {e}")
-            # Non-critical failure — sale is already committed.
+            current_app.logger.error(f"Failed to generate invoice snapshot: {e}")
+
+        # ── Final Commit ──────────────────────────────────────────
+        db.session.commit()
 
         clear_cart()
         session.pop('customer_id', None) # Detach customer after sale
@@ -755,14 +802,7 @@ def complete():
             'subtotal': float(sale.total_amount),
             'gst_total': float(sale.gst_total),
             'grand_total': float(sale.grand_total),
-            'items': [
-                {
-                    'name': item.product.name if item.product else 'Unknown',
-                    'qty': item.quantity,
-                    'price': float(item.price_at_sale),
-                    'subtotal': float(item.subtotal)
-                } for item in sale.items
-            ]
+            'items': receipt_items_snapshot
         }
 
         if request.headers.get('Accept') == 'application/json':
@@ -852,13 +892,11 @@ def mark_printed(sale_id):
         # Return empty string with 200 OK for safer HTMX swapping
         return '', 200
     return 'Sale not found', 404
-        
 @billing.route('/print-queue')
 @login_required
 def print_queue():
     """List sales from today that haven't been marked as printed."""
-    # Filter: created_at >= last 7 days AND is_printed is False
-    # This ensures pending prints don't disappear at midnight
+    from datetime import datetime, timedelta
     cutoff = datetime.utcnow() - timedelta(days=7)
     sales = Sale.query.filter(
         Sale.created_at >= cutoff,

@@ -6,7 +6,7 @@ from flask import abort, current_app, flash, redirect, render_template, request,
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
-from app import db
+from app import db, cache, socketio
 from app.auth.decorators import admin_required
 from app.inventory import inventory
 from app.inventory.models import InventoryLog, Product, ProductBatch, ProductVariant
@@ -173,6 +173,21 @@ def edit(product_id):
                 setattr(product, field, value)
             try:
                 db.session.commit()
+                # ── Cache Invalidation ──
+                for variant in product.variants:
+                    cache.delete(f"barcode_lookup_{variant.barcode}")
+                
+                # ── Real-time Broadcast ──
+                for v in product.variants:
+                    socketio.emit('inventory_update', {
+                        'variant_id': v.id,
+                        'barcode': v.barcode,
+                        'new_stock': v.stock,
+                        'new_price': str(v.price),
+                        'product_name': product.name,
+                        'is_active': v.is_active and product.is_active
+                    }, namespace='/')
+
                 current_app.logger.info("Admin updated product: %s", product.name)
                 flash(f'Product "{product.name}" updated successfully.', 'success')
                 return redirect(url_for('inventory.index'))
@@ -208,6 +223,21 @@ def delete(product_id):
     product = _load_product_or_404(product_id)
     product.is_active = False
     db.session.commit()
+    # ── Cache Invalidation ──
+    for variant in product.variants:
+        cache.delete(f"barcode_lookup_{variant.barcode}")
+    
+    # ── Real-time Broadcast ──
+    for v in product.variants:
+        socketio.emit('inventory_update', {
+            'variant_id': v.id,
+            'barcode': v.barcode,
+            'new_stock': 0 if not product.is_active else v.stock,
+            'new_price': str(v.price),
+            'product_name': product.name,
+            'is_active': False
+        }, namespace='/')
+
     current_app.logger.info("Admin deactivated product: %s", product.name)
     flash(f'Product "{product.name}" archived.', 'success')
     return redirect(url_for('inventory.index'))
@@ -348,6 +378,19 @@ def add_variant(product_id):
             )
         )
         db.session.commit()
+        # ── Cache Invalidation ──
+        cache.delete(f"barcode_lookup_{variant.barcode}")
+
+        # ── Real-time Broadcast ──
+        socketio.emit('inventory_update', {
+            'variant_id': variant.id,
+            'barcode': variant.barcode,
+            'new_stock': variant.stock,
+            'new_price': str(variant.price),
+            'product_name': product.name,
+            'is_active': variant.is_active
+        }, namespace='/')
+
         flash('Variant added successfully.', 'success')
         return redirect(url_for('inventory.variants', product_id=product.id))
     except IntegrityError:
@@ -404,6 +447,19 @@ def edit_variant(product_id, variant_id):
                     )
                 )
                 db.session.commit()
+                # ── Cache Invalidation ──
+                cache.delete(f"barcode_lookup_{variant.barcode}")
+                
+                # ── Real-time Broadcast ──
+                socketio.emit('inventory_update', {
+                    'variant_id': variant.id,
+                    'barcode': variant.barcode,
+                    'new_stock': variant.stock,
+                    'new_price': str(variant.price),
+                    'product_name': product.name,
+                    'is_active': variant.is_active
+                }, namespace='/')
+
                 flash('Variant updated successfully.', 'success')
                 return redirect(url_for('inventory.variants', product_id=product.id))
             except IntegrityError:
@@ -456,6 +512,19 @@ def delete_variant(product_id, variant_id):
         )
     )
     db.session.commit()
+    # ── Cache Invalidation ──
+    cache.delete(f"barcode_lookup_{variant.barcode}")
+    
+    # ── Real-time Broadcast ──
+    socketio.emit('inventory_update', {
+        'variant_id': variant.id,
+        'barcode': variant.barcode,
+        'new_stock': 0,
+        'new_price': str(variant.price),
+        'product_name': product.name,
+        'is_active': False
+    }, namespace='/')
+
     flash('Variant deleted successfully.', 'success')
     return redirect(url_for('inventory.variants', product_id=product.id))
 
@@ -588,6 +657,16 @@ def add_batch(product_id):
                 )
             )
             db.session.commit()
+            
+            # ── Real-time Broadcast ──
+            socketio.emit('inventory_update', {
+                'variant_id': target_variant.id,
+                'barcode': target_variant.barcode,
+                'new_stock': target_variant.stock,
+                'new_price': str(target_variant.price),
+                'product_name': product.name,
+                'is_active': target_variant.is_active
+            }, namespace='/')
 
             current_app.logger.info(
                 "Batch %r added for %s: +%s units",

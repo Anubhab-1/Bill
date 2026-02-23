@@ -16,7 +16,8 @@
 {% if cart %}
 
 <!-- ── Cart Table Area ────────────────────────────────────────── -->
-<div class="flex-1 min-h-0 flex flex-col mb-6 pro-card overflow-hidden">
+<div class="flex-1 min-h-0 flex flex-col mb-6 pro-card overflow-hidden" hx-get="{{ url_for('billing.refresh') }}"
+    hx-trigger="refreshCart">
     <div class="overflow-y-auto flex-1">
         <table class="pro-table">
             <thead>
@@ -34,7 +35,7 @@
                 {% set qty = item.quantity %}
                 {% set subtotal = (price * qty) %}
                 {% set total_with_gst = subtotal + (subtotal * item.gst_percent / 100) %}
-                <tr>
+                <tr data-barcode="{{ item.barcode }}" data-variant-id="{{ pid }}" data-price="{{ price }}">
                     <td>
                         <div class="flex items-start gap-3">
                             <div>
@@ -52,7 +53,7 @@
                                     {% set stock = stock_map.get(pid, 0) %}
                                     {% if item.quantity >= stock %}
                                     <span
-                                        class="text-[10px] font-bold text-red-400 bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">STOCK
+                                        class="stock-limit-badge text-[10px] font-bold text-red-400 bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">STOCK
                                         LIMIT</span>
                                     {% endif %}
                                     {% endif %}

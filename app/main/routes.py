@@ -147,6 +147,19 @@ def _send_alert_email(subject, body):
     # For now, we simulate it clearly in logs
     current_app.logger.critical(f"SENDING EMAIL ALERT: {subject} \n {body}")
 
+@main.route('/sw.js')
+def serve_sw():
+    from flask import send_from_directory, current_app, make_response
+    response = make_response(send_from_directory(current_app.static_folder, 'sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
+@main.route('/manifest.json')
+def serve_manifest():
+    from flask import send_from_directory, current_app
+    return send_from_directory(current_app.static_folder, 'manifest.json', mimetype='application/json')
+
 @main.route('/offline')
 def offline():
     """PWA offline fallback page."""

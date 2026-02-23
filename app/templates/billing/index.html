@@ -388,6 +388,53 @@
         }
     });
 
+    // ── Real-time Inventory Sync (Socket.IO) ───────────────────────────────
+    if (window.socket) {
+        window.socket.on('inventory_update', function (data) {
+            console.log('Real-time: Inventory Update received', data);
+
+            // 1. Check if the updated item is in the current cart
+            // We search for elements with data-barcode or variant IDs
+            const cartItem = document.querySelector(`[data-barcode="${data.barcode}"]`);
+
+            // 2. Performance: If price changed and item is in cart, we MUST refresh cart to update totals
+            // Using HTMX trigger for #cart-section
+            if (cartItem) {
+                const oldPrice = cartItem.getAttribute('data-price');
+                if (oldPrice && parseFloat(oldPrice) !== parseFloat(data.new_price)) {
+                    showRealTimeToast(`Price update for ${data.product_name}: ₹${data.new_price}`, 'info');
+                    // Trigger HTMX refresh for cart section to recalculate everything (taxes/promos)
+                    htmx.trigger('#cart-section', 'refreshCart');
+                }
+            }
+
+            // 3. Update stock-out indicators dynamically if they exist
+            const stockLimitBadge = document.querySelector(`[data-variant-id="${data.variant_id}"] .stock-limit-badge`);
+            if (stockLimitBadge) {
+                // Logic to hide/show based on qty comparison would be complex without knowing current qty here
+                // Simple approach: Trigger HTMX refresh for accurate state
+                htmx.trigger('#cart-section', 'refreshCart');
+            }
+        });
+    }
+
+    function showRealTimeToast(msg, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/10 flex items-center gap-3 animate-bounce-in`;
+
+        const bgColor = type === 'info' ? 'bg-brand-500/90' : 'bg-red-500/90';
+        toast.classList.add(bgColor);
+
+        toast.innerHTML = `
+            <span class="text-xs font-bold text-white uppercase tracking-widest">${msg}</span>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.replace('animate-bounce-in', 'animate-fade-out');
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
+    }
+
 </script>
 
 {% endblock %}

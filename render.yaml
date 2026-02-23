@@ -3,7 +3,7 @@ services:
     name: mall-billing-service
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: flask patch-db && gunicorn -w 4 --timeout 120 --max-requests 1000 --max-requests-jitter 100 -b 0.0.0.0:10000 wsgi:app
+    startCommand: flask patch-db && gunicorn -k eventlet -w 1 --timeout 120 --max-requests 1000 --max-requests-jitter 100 -b 0.0.0.0:10000 wsgi:app
     autoDeploy: true
     envVars:
       - key: FLASK_ENV
@@ -16,8 +16,18 @@ services:
         fromDatabase:
           name: mall-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mall-redis
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
+
+  - type: redis
+    name: mall-redis
+    plan: free
+    ipAllowList: [] # Only allow internal traffic
 
 databases:
   - name: mall-db
