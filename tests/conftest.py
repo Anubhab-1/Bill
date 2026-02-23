@@ -11,7 +11,6 @@ os.environ['DATABASE_URL'] = 'postgresql://postgres:Galaxy%402006@localhost:5432
 def app():
     """Create a Flask app context for the session."""
     app = create_app('testing')
-    print(f"\nDEBUG: App DB URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     
     with app.app_context():
         # Make sure the testing database is clean before any tests run

@@ -70,6 +70,7 @@ class TestingConfig(Config):
     """Testing environment configuration."""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = _database_url_from_env()
+    CACHE_TYPE = "SimpleCache"
 
     SQLALCHEMY_ENGINE_OPTIONS = {
         "poolclass": NullPool

@@ -18,6 +18,13 @@ from app.inventory.validators import (
 )
 
 
+def _invalidate_barcode_cache(barcode: str):
+    try:
+        cache.delete(f"barcode_lookup_{barcode}")
+    except Exception:
+        pass
+
+
 def _load_product_or_404(product_id: int) -> Product:
     product = db.session.get(Product, product_id)
     if product is None:
@@ -175,7 +182,7 @@ def edit(product_id):
                 db.session.commit()
                 # ── Cache Invalidation ──
                 for variant in product.variants:
-                    cache.delete(f"barcode_lookup_{variant.barcode}")
+                    _invalidate_barcode_cache(variant.barcode)
                 
                 # ── Real-time Broadcast ──
                 for v in product.variants:
@@ -225,7 +232,7 @@ def delete(product_id):
     db.session.commit()
     # ── Cache Invalidation ──
     for variant in product.variants:
-        cache.delete(f"barcode_lookup_{variant.barcode}")
+        _invalidate_barcode_cache(variant.barcode)
     
     # ── Real-time Broadcast ──
     for v in product.variants:
@@ -379,7 +386,7 @@ def add_variant(product_id):
         )
         db.session.commit()
         # ── Cache Invalidation ──
-        cache.delete(f"barcode_lookup_{variant.barcode}")
+        _invalidate_barcode_cache(variant.barcode)
 
         # ── Real-time Broadcast ──
         socketio.emit('inventory_update', {
@@ -448,7 +455,7 @@ def edit_variant(product_id, variant_id):
                 )
                 db.session.commit()
                 # ── Cache Invalidation ──
-                cache.delete(f"barcode_lookup_{variant.barcode}")
+                _invalidate_barcode_cache(variant.barcode)
                 
                 # ── Real-time Broadcast ──
                 socketio.emit('inventory_update', {
@@ -513,7 +520,7 @@ def delete_variant(product_id, variant_id):
     )
     db.session.commit()
     # ── Cache Invalidation ──
-    cache.delete(f"barcode_lookup_{variant.barcode}")
+    _invalidate_barcode_cache(variant.barcode)
     
     # ── Real-time Broadcast ──
     socketio.emit('inventory_update', {

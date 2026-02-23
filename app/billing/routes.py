@@ -1,9 +1,8 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from flask import (
     render_template, redirect, url_for,
-    request, flash, session, abort, current_app
+    request, flash, session, abort, current_app, jsonify
 )
-from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.billing import billing
@@ -15,7 +14,7 @@ from app.billing.cart import (
 )
 from app.billing.invoice import generate_invoice_number
 from sqlalchemy.orm import joinedload
-from app.inventory.models import InventoryLog, Product, ProductVariant
+from app.inventory.models import InventoryLog, ProductVariant
 from app.customers.models import Customer, GiftCard
 from app.billing.models import CashSession
 from app.auth.decorators import login_required, admin_required
@@ -37,11 +36,42 @@ from datetime import datetime, timedelta
 def get_variant_by_barcode(barcode):
     """Cached lookup for a variant by its barcode."""
     cache_key = f"barcode_lookup_{barcode}"
-    variant = cache.get(cache_key)
-    if variant is None:
-        variant = ProductVariant.query.filter_by(barcode=barcode, is_active=True).first()
-        if variant:
-            cache.set(cache_key, variant, timeout=3600)
+    try:
+        variant_id = cache.get(cache_key)
+    except Exception:
+        variant_id = None
+    if variant_id is None:
+        variant_id = (
+            db.session.query(ProductVariant.id)
+            .filter(
+                ProductVariant.barcode == barcode,
+                ProductVariant.is_active.is_(True),
+            )
+            .scalar()
+        )
+        if variant_id is not None:
+            try:
+                cache.set(cache_key, variant_id, timeout=3600)
+            except Exception:
+                pass
+        else:
+            return None
+
+    variant = (
+        db.session.query(ProductVariant)
+        .options(joinedload(ProductVariant.product))
+        .filter(
+            ProductVariant.id == variant_id,
+            ProductVariant.is_active.is_(True),
+        )
+        .first()
+    )
+    if variant is None or variant.product is None or not variant.product.is_active:
+        try:
+            cache.delete(cache_key)
+        except Exception:
+            pass
+        return None
     return variant
 
 def get_stock_map(cart):
@@ -52,7 +82,14 @@ def get_stock_map(cart):
     if not cart:
         return {}
     
-    variant_ids = [int(vid) for vid in cart.keys()]
+    variant_ids = []
+    for vid in cart.keys():
+        try:
+            variant_ids.append(int(vid))
+        except (ValueError, TypeError):
+            continue
+    if not variant_ids:
+        return {}
     variants = ProductVariant.query.filter(ProductVariant.id.in_(variant_ids)).all()
     return {str(v.id): v.stock for v in variants}
 
@@ -76,10 +113,6 @@ def enforce_session():
     if not session.get('user_id'):
         return
 
-    # Skip checking if we are already on session management/admin pages
-    if request.view_args and 'session' in request.view_args: # No, path check better
-        pass
-    
     # Check explicitly allowed routes relative to 'billing'
     # request.endpoint example: 'billing.open_session'
     endpoint = request.endpoint
@@ -497,12 +530,11 @@ def complete():
             # SELECT … FOR UPDATE — holds a row-level lock until COMMIT/ROLLBACK
             variant = (
                 db.session.query(ProductVariant)
-                .options(joinedload(ProductVariant.product))
                 .filter(ProductVariant.id == vid)
                 .with_for_update()
                 .first()
             )
-            if variant is None or variant.product is None or not variant.product.is_active:
+            if variant is None or not variant.is_active or variant.product is None or not variant.product.is_active:
                 raise ValueError(f'Variant ID {vid} no longer exists.')
             locked_variants[str(vid)] = variant
 
@@ -668,8 +700,20 @@ def complete():
             p_gift    = Decimal(request.form.get('payment_gift') or '0')
             gift_code = request.form.get('gift_card_code', '').strip()
             
+            for method_name, amount in {
+                'cash': p_cash,
+                'card': p_card,
+                'upi': p_upi,
+                'loyalty': p_loyalty,
+                'gift card': p_gift,
+            }.items():
+                if amount < 0:
+                    raise ValueError(f"Payment amount cannot be negative ({method_name}).")
+            if p_loyalty != p_loyalty.to_integral_value():
+                raise ValueError("Loyalty redemption must be a whole number of points.")
+
             total_tendered = p_cash + p_card + p_upi + p_loyalty + p_gift
-        except Exception:
+        except (InvalidOperation, TypeError):
             raise ValueError("Invalid payment amounts provided.")
 
         # Ensure full payment (allow tiny rounding error)
@@ -679,8 +723,6 @@ def complete():
                  p_cash = grand_total
              else:
                  raise ValueError(f"Insufficient payment. Paid: {total_tendered}, Total: {grand_total}")
-        
-        from app.billing.models import SalePayment
         
         # If Card/Other used, record them exactly
         # If Card/Other used, record them exactly
@@ -736,8 +778,8 @@ def complete():
             CashSession.end_time == None
         ).first()
         
-        if active_session:
-             active_session.system_total += grand_total
+        if active_session and cash_revenue > 0:
+             active_session.system_total += cash_revenue
              db.session.add(active_session)
 
         db.session.flush()   # assigns sale.id without committing
@@ -896,7 +938,6 @@ def mark_printed(sale_id):
 @login_required
 def print_queue():
     """List sales from today that haven't been marked as printed."""
-    from datetime import datetime, timedelta
     cutoff = datetime.utcnow() - timedelta(days=7)
     sales = Sale.query.filter(
         Sale.created_at >= cutoff,
@@ -1140,7 +1181,9 @@ def exchange_process(sale_id):
                 .with_for_update()
                 .first()
             )
-            if active_session and difference != 0:
+            if active_session and difference > 0 and collect_method == 'cash':
+                active_session.system_total += difference
+            if active_session and difference < 0 and refund_method == 'cash':
                 active_session.system_total += difference
 
             reason_base = (

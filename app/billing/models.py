@@ -1,6 +1,8 @@
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
+from sqlalchemy import event, select
+
 from app import db
 
 
@@ -95,6 +97,31 @@ class SaleItem(db.Model):
 
     def __repr__(self):
         return f"<SaleItem sale={self.sale_id} variant={self.variant_id} qty={self.quantity}>"
+
+
+def _variant_product_id(connection, variant_id):
+    from app.inventory.models import ProductVariant
+
+    return connection.execute(
+        select(ProductVariant.product_id).where(ProductVariant.id == variant_id)
+    ).scalar_one_or_none()
+
+
+@event.listens_for(SaleItem, 'before_insert')
+def _sale_item_before_insert(_mapper, connection, target):
+    # Keep product_id in sync with variant_id for legacy callers that only pass variant_id.
+    if target.product_id is None and target.variant_id is not None:
+        product_id = _variant_product_id(connection, target.variant_id)
+        if product_id is not None:
+            target.product_id = int(product_id)
+
+
+@event.listens_for(SaleItem, 'before_update')
+def _sale_item_before_update(_mapper, connection, target):
+    if target.variant_id is not None:
+        product_id = _variant_product_id(connection, target.variant_id)
+        if product_id is not None and target.product_id != product_id:
+            target.product_id = int(product_id)
 
 
 class Return(db.Model):

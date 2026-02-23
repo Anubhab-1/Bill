@@ -218,7 +218,7 @@ def test_grn_increases_stock(client):
     assert resp.status_code == 200
 
     with client.application.app_context():
-        p_db  = Product.query.get(item.product_id)
+        p_db  = db.session.get(Product, item.product_id)
         po_db = db.session.get(PurchaseOrder, po_id)
 
         # Stock updated

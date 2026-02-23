@@ -10,12 +10,16 @@ from app.auth.models import User
 @pytest.fixture
 def app():
     os.environ["SECRET_KEY"] = "test-secret"
-    os.environ["DATABASE_URL"] = "postgresql://postgres:Galaxy%402006@localhost:5432/mall"
+    os.environ["DATABASE_URL"] = os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql://postgres:Galaxy%402006@localhost:5432/mall_test",
+    )
     app = create_app('testing')
     app.config['WTF_CSRF_ENABLED'] = False
     from app.billing.models import SalePayment
     from app.inventory.models import InventoryLog, Product, ProductVariant
     with app.app_context():
+        db.create_all()
         # Clean up relevant tables
         db.session.query(AppliedPromotion).delete()
         db.session.query(SaleItem).delete()

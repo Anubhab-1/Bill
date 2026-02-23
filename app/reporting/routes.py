@@ -10,15 +10,14 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from flask import (
     render_template, request, Response, stream_with_context,
-    current_app, url_for
 )
-from sqlalchemy import func, case, desc, Date, cast
+from sqlalchemy import func, desc, Date, cast
 
 from app.reporting import reporting
 from app.auth.decorators import admin_required
 from app import db
 from app.billing.models import Sale, SaleItem, SalePayment
-from app.inventory.models import Product, ProductBatch, ProductVariant
+from app.inventory.models import Product, ProductVariant
 from app.purchasing.models import PurchaseOrder, PurchaseOrderItem, POStatus
 
 
@@ -27,19 +26,26 @@ from app.purchasing.models import PurchaseOrder, PurchaseOrderItem, POStatus
 def _get_date_range():
     """Parse start/end dates from query params, default to current month."""
     today = date.today()
-    start_str = request.args.get('start_date')
-    end_str   = request.args.get('end_date')
+    start_date = today.replace(day=1)
+    end_date = today
+
+    start_str = (request.args.get('start_date') or '').strip()
+    end_str = (request.args.get('end_date') or '').strip()
 
     if start_str:
-        start_date = date.fromisoformat(start_str)
-    else:
-        # Default to 1st of this month
-        start_date = today.replace(day=1)
+        try:
+            start_date = date.fromisoformat(start_str)
+        except ValueError:
+            pass
 
     if end_str:
-        end_date = date.fromisoformat(end_str)
-    else:
-        end_date = today
+        try:
+            end_date = date.fromisoformat(end_str)
+        except ValueError:
+            pass
+
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
 
     return start_date, end_date
 
@@ -53,6 +59,15 @@ def _get_datetime_bounds():
     start_dt = datetime.combine(start_date, datetime.min.time())
     end_dt_exclusive = datetime.combine(end_date + timedelta(days=1), datetime.min.time())
     return start_date, end_date, start_dt, end_dt_exclusive
+
+
+def _parse_days(default=30, max_days=365):
+    raw = request.args.get('days', default)
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        days = default
+    return max(1, min(days, max_days))
 
 
 # ── Dashboard ─────────────────────────────────────────────────────
@@ -435,7 +450,7 @@ def api_revenue_trend():
     Returns daily revenue totals for the last N days.
     Query param: days (default 30)
     """
-    days = min(int(request.args.get('days', 30)), 365)
+    days = _parse_days(30, 365)
     today = date.today()
     start = today - timedelta(days=days - 1)
 
@@ -470,7 +485,7 @@ def api_payment_methods():
     """
     Returns revenue breakdown by payment method for the last N days.
     """
-    days = min(int(request.args.get('days', 30)), 365)
+    days = _parse_days(30, 365)
     today = date.today()
     start = today - timedelta(days=days - 1)
 
@@ -496,7 +511,7 @@ def api_top_products():
     """
     Returns top 10 products by revenue for the last N days.
     """
-    days = min(int(request.args.get('days', 30)), 365)
+    days = _parse_days(30, 365)
     today = date.today()
     start = today - timedelta(days=days - 1)
 
@@ -526,7 +541,7 @@ def api_hourly_heatmap():
     Returns average number of transactions per hour of the day
     for the last N days.
     """
-    days = min(int(request.args.get('days', 30)), 365)
+    days = _parse_days(30, 365)
     today = date.today()
     start = today - timedelta(days=days - 1)
 
@@ -555,7 +570,7 @@ def api_category_breakdown():
     Returns revenue breakdown by product category for the last N days.
     Products without a category are grouped as 'Uncategorised'.
     """
-    days = min(int(request.args.get('days', 30)), 365)
+    days = _parse_days(30, 365)
     today = date.today()
     start = today - timedelta(days=days - 1)
 
